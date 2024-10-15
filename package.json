@@ -1,0 +1,26 @@
+{
+  "name": "lego-telepresence",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@abandonware/noble": "^1.9.2-25",
+    "dotenv": "^16.4.5",
+    "goproh4": "^0.4.2",
+    "node-ble": "^1.11.0",
+    "node-global-key-listener": "^0.3.0",
+    "node-media-server": "^2.7.0",
+    "node-poweredup": "^9.0.0",
+    "protobufjs": "^7.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5"
+  }
+}
