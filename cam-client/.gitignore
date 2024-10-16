@@ -1,0 +1,6 @@
+dist
+node_modules
+.history
+.env*
+!.env.template
+config.jsonc
