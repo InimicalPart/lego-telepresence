@@ -13,6 +13,11 @@ interface LTPGlobal extends NodeJS.Global {
             },
             car?: {
                 name: string,
+                MACAddress: string,
+                firmwareRevision: string,
+                hardwareRevision: string,
+
+                camSerial: string,
             },
             connection: import("ws").WebSocket,
         }[]
