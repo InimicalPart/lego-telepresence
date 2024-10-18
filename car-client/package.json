@@ -3,17 +3,24 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "Inimi",
+  "type": "module",
   "license": "ISC",
   "description": "",
   "dependencies": {
-      "@abandonware/noble": "^1.9.2-25",
-      "node-poweredup": "^9.0.0"
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "inimi-ble": "file:../custom-modules/inimi-ble",
+    "inimi-poweredup": "file:../custom-modules/inimi-poweredup",
+    "jsonc-parser": "^3.3.1",
+    "node-global-key-listener": "^0.3.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
-      "@types/node": "^22.7.5"
+    "@types/node": "^22.7.5",
+    "@types/ws": "^8.5.12"
   }
 }

@@ -1,0 +1,17 @@
+{
+  "name": "lego-telepresence",
+  "version": "1.0.0",
+  "description": "For this to work, we need to make some modifications to [next-ws](https://github.com/apteryxxyz/next-ws) as the canary version of NextJS (v15) is supported but blocked by ``next-ws``' support check.",
+  "main": "index.js",
+  "scripts": {
+    "car-install": "npm install --prefix car-client",
+    "www-install": "npm install --prefix www --force",
+    "cam-install": "npm install --prefix cam-client",
+    "custom-install": "npm install --prefix custom-modules/inimi-ble && npm install --prefix custom-modules/inimi-poweredup",
+
+    "install": "npm run custom-install && npm run car-install && npm run www-install && npm run cam-install"
+  },
+  "keywords": [],
+  "author": "Inimi",
+  "license": "ISC"
+}

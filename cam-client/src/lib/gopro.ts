@@ -52,7 +52,9 @@ export default class GoProClient {
     public MAC: string
     private debug: boolean = false
     private isSetup: boolean = false
+    public isSleeping: boolean = false
     private device: Device;
+    private keepAlive = false;
     public events: EventEmitter = new EventEmitter();
     private gatt: GattServer;
     private logger = (...args: any[]) => (this.debug ? console.log : () => {})(...args)
@@ -102,7 +104,7 @@ export default class GoProClient {
         reject: (error: Error) => void
     }[] = []
 
-    private reconnectTimer: NodeJS.Timeout;
+    private keepAliveTimer: NodeJS.Timeout;
 
     constructor(MAC: string, debug: boolean = false) {
         this.MAC = MAC
@@ -111,7 +113,7 @@ export default class GoProClient {
 
     async connect() {
         this.logger("Searching for GoPro with MAC", this.MAC)
-        await adapter.startDiscovery()
+        await adapter.startDiscovery().catch((e)=>{})
         const device = await adapter.waitDevice(this.MAC, 120000, 1000)
         if (!device) {
             this.logger("Failed to find GoPro, retrying in 30 seconds...")
@@ -119,22 +121,20 @@ export default class GoProClient {
             return
         }
         this.logger("Found GoPro, connecting...")
-        await adapter.stopDiscovery()
+        await adapter.stopDiscovery().catch((e)=>{})
         await device.connect()
+        this.isSleeping = false
         this.logger("Connected to GoPro")
         this.events.emit("connect")
 
-        if (this.reconnectTimer) {
-            clearInterval(this.reconnectTimer)
+        if (this.keepAliveTimer) {
+            clearInterval(this.keepAliveTimer)
         }
 
-        device.on("disconnect", () => {
-            this.events.emit("disconnect")
-            this.isSetup = false
-            this.logger("GoPro disconnected, attempting to reconnect in 30 seconds...")
 
-            setTimeout(()=>this.attemptReconnect(), 30000)
-        })
+        device.off("disconnect", () => this.onDisconnect())
+
+        device.on("disconnect", () => this.onDisconnect())
 
         if (!device.isPaired()) {
             this.logger("GoPro is not paired, pairing... (make sure you go into the GoPro's settings, and attempt to connect the GoPro Quik app)")
@@ -156,6 +156,18 @@ export default class GoProClient {
         await this.setup()
     }
     
+    private async onDisconnect() {
+        this.events.emit("disconnect", {isSleeping: this.isSleeping})
+        this.isSetup = false
+
+        if (!this.isSleeping) {
+            this.logger("GoPro disconnected, attempting to reconnect in 30 seconds...")
+            setTimeout(()=>this.attemptReconnect(), 30000)
+        } else {
+            this.logger("GoPro disconnected because the user put it to sleep")
+        }
+    }
+
     private async attemptReconnect() {
         try {
             await this.connect()
@@ -190,6 +202,7 @@ export default class GoProClient {
         await this.startListening();
 
         this.isSetup = true
+        this.keepAliveTimer = setInterval(() => this.keepAliveCmd(), 3000)
         this.logger("Setup complete")
         this.events.emit("ready")
     }
@@ -342,6 +355,14 @@ export default class GoProClient {
     }
 
     /**
+     * @description Check if keep alive is enabled
+     * @returns {boolean} If keep alive is enabled
+     */
+    isKeepAliveEnabled(): boolean {
+        return this.keepAlive;
+    }
+
+    /**
      * @description Wait for a response from the GoPro (Protobuf)
      * @param featureId - The feature ID of the response
      * @param actionId - The action ID of the response
@@ -367,7 +388,7 @@ export default class GoProClient {
     /**
      * @description Disconnect from the GoPro and clean up
      * @returns {Promise<void>}
-    */
+     */
     async cleanup(): Promise<void> {
         this.logger("Cleaning up...")
         await this.characteristics.response.COMMAND_RESP.stopNotifications()
@@ -376,6 +397,12 @@ export default class GoProClient {
         await this.device.disconnect()
         destroy()
         this.logger("Cleaned up")
+    }
+
+    private async keepAliveCmd() {
+        if (this.keepAlive && await this.device.isConnected() == "true") {
+            this.characteristics.request.SETTINGS.writeValue(this.getTLVByteArray("5B","42"))
+        }
     }
 
     //! -- COMMANDS -- !\\
@@ -404,7 +431,7 @@ export default class GoProClient {
     /**
      * @description Get the battery level of the GoPro (in %)
      * @returns {Promise<number>} The battery level of the GoPro
-    */
+     */
     async getBatteryLevel(): Promise<number> {
         const tempBattLevel = (await (await this.services.BATTERY.getCharacteristic('00002a19-0000-1000-8000-00805f9b34fb')).readValue()).toString('hex')
         return parseInt(tempBattLevel, 16)
@@ -412,11 +439,18 @@ export default class GoProClient {
 
     /**
      * @description Turn off the GoPro
-     * @param {boolean} force - Force the shutdown
      * @returns {Promise<void>}
-    */
-    async powerOff(force: boolean = false): Promise<void> {
-        await this.characteristics.request.COMMAND.writeValue(this.getTLVByteArray(force ? "04" : "05"))
+     */
+    async powerOff(): Promise<void> {
+        await this.characteristics.request.COMMAND.writeValue(this.getTLVByteArray("04"))
+    }
+
+    /**
+     * @description Prevent or allow the camera to go to sleep
+     * @returns {Promise<void>}
+     */
+    async toggleKeepAlive(keepAlive: boolean): Promise<void> {
+        this.keepAlive = keepAlive
     }
 
     /**
@@ -424,7 +458,16 @@ export default class GoProClient {
      * @returns {Promise<void>}
      */
     async sleep(): Promise<void> {
+        this.isSleeping = true
         await this.characteristics.request.COMMAND.writeValue(this.getTLVByteArray("05"))
+    }
+
+    /**
+     * @description Wake & reconnect to the GoPro
+     * @returns {Promise<void>}
+     */
+    async wake(): Promise<void> {
+        await this.attemptReconnect();
     }
 
     /**

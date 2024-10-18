@@ -26,7 +26,7 @@ async function setupRTMP() {
             },
             http: {
                 port: 8000,
-                allow_origin: 'localhost',
+                allow_origin: '*',
                 mediaroot: './media',
             },
             logType: 0

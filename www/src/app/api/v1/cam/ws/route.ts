@@ -4,6 +4,7 @@ import { send } from 'process';
 
 declare const global: LTPGlobal;
 
+export async function GET(){}
 
 export async function SOCKET(
     client: import('ws').WebSocket,
@@ -44,8 +45,14 @@ export async function SOCKET(
                 });
                 client.send(JSON.stringify({type: "connected"}));
                 console.log(`[WS] Camera connected: ${data.serialNumber}`);
+                client.send(JSON.stringify({type: "keepAlive", enabled: true}));
+                break;
+            case "ok":
+                console.log(`[WS] Camera responded with OK`);
                 break;
             default:
+                console.log(`[WS] Unknown message type: ${data.type}`);
+                console.log(data);
                 break;
         }
 

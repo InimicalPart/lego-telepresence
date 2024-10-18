@@ -18,7 +18,7 @@ if (global.config.DEVELOPMENT) {
     config({path: "./.env.production"});
 }
 
-const camera = new GoProClient(global.config.CAMERA_MAC);
+const camera = new GoProClient(global.config.CAMERA_MAC, true);
 
 let socket: WebSocket;
 
@@ -31,10 +31,11 @@ camera.events.on("ready", () => {
     }
 })
 
-camera.events.on("disconnect", () => {
-    console.log("Camera disconnected");
+camera.events.on("disconnect", (data) => {
+    console.log(`Camera disconnected${data.isSleeping ? ", the user put it to sleep.":""}`);
     isConnected = false;
-    if (socket.readyState === WebSocket.OPEN) {
+    //! Do not close the connection if the user put the camera to sleep, this is so that the camera can be woken up by the server
+    if (socket.readyState === WebSocket.OPEN && !data.isSleeping) {
         socket.close(1000, "Camera disconnected from client");
     }
 })
@@ -85,7 +86,9 @@ async function parseMessage(message: string) {
 
 async function processMessage(data: any) {
     if (!isConnected) {
-        return socket.send(JSON.stringify({error: "Camera not connected"}));
+        if (!camera.isSleeping || data.type != "wake") {
+            return socket.send(JSON.stringify({error: "Camera not connected"}));
+        }
     }
     switch (data.type) {
         case "identify":
@@ -113,7 +116,15 @@ async function processMessage(data: any) {
             await sendOK();
             break;
         case "powerOff":
-            await camera.powerOff(!!data.force ? data.force : undefined);
+            await camera.powerOff();
+            await sendOK();
+            break;
+        case "wake":
+            await camera.wake();
+            await sendOK();
+            break;
+        case "keepAlive":
+            await camera.toggleKeepAlive(data.enabled ?? true)
             await sendOK();
             break;
         default:
@@ -122,7 +133,7 @@ async function processMessage(data: any) {
 }
 
 async function sendStatus() {
-    socket.send(JSON.stringify({type: "status", connected: isConnected}));
+    socket.send(JSON.stringify({type: "status", connected: isConnected, sleeping: !isConnected && camera.isSleeping}));
 }
 
 async function sendBatteryLevel() {
