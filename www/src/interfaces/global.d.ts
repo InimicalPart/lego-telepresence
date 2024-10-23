@@ -1,24 +1,25 @@
+import { InimizedWS } from "@/utils/ws";
 import NodeMediaServer from "node-media-server";
 
 interface LTPGlobal extends NodeJS.Global {
     nms: NodeMediaServer | null,
     connections: {
             id: string,
-            type: "cam" | "car",
+            type: "cam" | "car" | "user",
             cam?: {
                 name: string,
+                MACAddress: string,
                 modelNumber: string,
+                firmwareVersion: string
                 serialNumber: string,
-                firmwareRevision: string
             },
             car?: {
                 name: string,
                 MACAddress: string,
-                firmwareRevision: string,
-                hardwareRevision: string,
-
-                camSerial: string,
+                firmwareVersion: string,
+                hardwareVersion: string,
+                cameraSerial: string,
             },
-            connection: import("ws").WebSocket,
+            connection: InimizedWS,
         }[]
 }

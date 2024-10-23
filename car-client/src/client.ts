@@ -5,6 +5,7 @@ import axios from "axios";
 import path from "path";
 import { WebSocket } from "ws";
 import CarClient from "./lib/car.js";
+import si from "systeminformation";
 
 declare const global: CarClientGlobal;
 
@@ -34,17 +35,18 @@ car.events.on("ready", () => {
 car.events.on("disconnect", () => {
     console.log(`Car disconnected`);
     isConnected = false;
-    //! Do not close the connection if the user put the camera to sleep, this is so that the camera can be woken up by the server
     if (socket.readyState === WebSocket.OPEN) {
         socket.close(1000, "Car disconnected from client");
-        socket.terminate()
     }
 })
 
-await car.connect();
+await car.connect().catch(onConnectionFailed)
 
 
-
+async function onConnectionFailed(error) {
+    console.error("Error connecting to car:", error);
+    await car.connect().catch(onConnectionFailed)
+}
 
 function registerHandlers() {
     socket.on("open", () => {
@@ -56,7 +58,6 @@ function registerHandlers() {
         console.log("Reconnecting in 30 seconds...");
         setTimeout(() => {
             socket = new WebSocket(process.env.WS_URL);
-            registerHandlers();
         }, 30000);
     })
 
@@ -67,7 +68,6 @@ function registerHandlers() {
         if (willReconnect) {
             setTimeout(() => {
                 socket = new WebSocket(process.env.WS_URL);
-                registerHandlers();
             }, 30000);
         }
     })
@@ -91,33 +91,66 @@ async function processMessage(data: any) {
     }
     switch (data.type) {
         case "identify":
-            await sendIdentification();
+            await sendIdentification(data.nonce);
             break;
         case "status":
-            await sendStatus();
+            await sendStatus(data.nonce);
             break;
         case "battery":
-            await sendBatteryLevel();
+            await sendBatteryLevel(data.nonce);
+            break;
+        case "system":
+            socket.send(JSON.stringify({type: "system", model: await getModel(), hostname: await getHostname(), os: await getSystemOSName(), nonce: data.nonce}));
             break;
         default:
             break;
     }
 }
 
-async function sendStatus() {
+async function sendStatus(nonce: string ) {
 }
 
-async function sendBatteryLevel() {
+async function sendBatteryLevel(nonce: string) {
+    const batteryLevel = car.getBattery();
+    socket.send(JSON.stringify({type: "battery", level: batteryLevel, nonce}));
 }
 
-async function sendIdentification() {
+async function sendIdentification(nonce: string) {
     const info = await car.getInfo();
     delete info.batteryLevel;
-    socket.send(JSON.stringify({type: "identify", ...info, ...(global.config.CAMERA_SN ? {cameraSerial: global.config.CAMERA_SN} : {})}));
+    socket.send(JSON.stringify({type: "identify", ...info, ...(global.config.CAMERA_SN ? {cameraSerial: global.config.CAMERA_SN} : {}), nonce}));
 }
 
-async function sendOK() {
-    socket.send(JSON.stringify({type: "ok"}));
+async function sendOK(nonce: string) {
+    socket.send(JSON.stringify({type: "ok", nonce}));
+}
+
+async function getSystemOSName() {
+    try {
+        return readFileSync("/etc/os-release", {encoding: "utf-8"}).match(/PRETTY_NAME="(.*)"/)[1];
+    } catch (e) {
+        return "Unknown";
+    }
+}
+ 
+async function getModel() {
+    try {
+        return readFileSync("/proc/device-tree/model", {encoding: "utf-8"});
+    } catch (e) {
+        try {
+            return (await si.system()).model;
+        } catch (e) {
+            return "Unknown";
+        }   
+    }
+}
+
+async function getHostname() {
+    try {
+        return readFileSync("/etc/hostname", {encoding: "utf-8"});
+    } catch (e) {
+        return "Unknown";
+    }
 }
 
 async function sleep(ms: number) {

@@ -112,6 +112,10 @@ export default class GoProClient {
     }
 
     async connect() {
+        if (this.device) {
+            this.device.disconnect()
+            this.device.removeAllListeners()
+        }
         this.logger("Searching for GoPro with MAC", this.MAC)
         await adapter.startDiscovery().catch((e)=>{})
         const device = await adapter.waitDevice(this.MAC, 120000, 1000)
@@ -159,6 +163,7 @@ export default class GoProClient {
     private async onDisconnect() {
         this.events.emit("disconnect", {isSleeping: this.isSleeping})
         this.isSetup = false
+        this.keepAlive = false
 
         if (!this.isSleeping) {
             this.logger("GoPro disconnected, attempting to reconnect in 30 seconds...")
@@ -199,10 +204,11 @@ export default class GoProClient {
         this.characteristics.request.NETWORK_MANAGEMENT = await this.services.GP0090.getCharacteristic('b5f90091-aa8d-11e3-9046-0002a5d5c51b')
         this.characteristics.response.NETWORK_MANAGEMENT_RESP = await this.services.GP0090.getCharacteristic('b5f90092-aa8d-11e3-9046-0002a5d5c51b')
 
-        await this.startListening();
 
         this.isSetup = true
         this.keepAliveTimer = setInterval(() => this.keepAliveCmd(), 3000)
+        await this.startListening();
+
         this.logger("Setup complete")
         this.events.emit("ready")
     }
@@ -215,6 +221,7 @@ export default class GoProClient {
         this.characteristics.response.COMMAND_RESP.on('valuechanged', (b)=>this.parseReponse(b))
         this.characteristics.response.NETWORK_MANAGEMENT_RESP.on('valuechanged', (b)=>this.parseReponse(b))
         this.characteristics.response.SETTINGS_RESP.on('valuechanged', (b)=>this.parseReponse(b))
+        console.log("Listening for responses")
     }
 
     private async parseReponse(buffer: Buffer) {
@@ -344,7 +351,7 @@ export default class GoProClient {
                     break
             }
             
-            this.logger(`[TLV] [${COMMAND_ID} - ${commandExecutionStatus}]${PAYLOAD ? ":" : ""}`, PAYLOAD)
+            this.logger(`[TLV] [${COMMAND_ID} - ${commandExecutionStatus}]${PAYLOAD || bufferString ? ":" : ""}`, PAYLOAD || bufferString)
     
             const tlvWaitFor = this.tlvWaitForList.find((a) => a.commandId == COMMAND_ID)
             if (tlvWaitFor) {
@@ -400,7 +407,7 @@ export default class GoProClient {
     }
 
     private async keepAliveCmd() {
-        if (this.keepAlive && await this.device.isConnected() == "true") {
+        if (this.keepAlive && await this.device.isConnected() == true as any) {
             this.characteristics.request.SETTINGS.writeValue(this.getTLVByteArray("5B","42"))
         }
     }
@@ -409,22 +416,24 @@ export default class GoProClient {
 
     /**
      * @description Get information about the GoPro (name, model number, serial number, firmware revision, battery level)
-     * @returns {Promise<{name: string, modelNumber: string, serialNumber: string, firmwareRevision: string, batteryLevel: number}>} Information about the GoPro
+     * @returns {Promise<{name: string, modelNumber: string, serialNumber: string, firmwareVersion: string, batteryLevel: number, MACAddress: string}>} Information about the GoPro
      */
-    async getInfo(): Promise<{ name: string; modelNumber: string; serialNumber: string; firmwareRevision: string; batteryLevel: number }> {
+    async getInfo(): Promise<{ name: string; modelNumber: string; serialNumber: string; firmwareVersion: string; batteryLevel: number, MACAddress: string }> {
         const batteryLevel = await this.getBatteryLevel()
 
         const modelNumber = (await (await this.services.INFO.getCharacteristic('00002a24-0000-1000-8000-00805f9b34fb')).readValue()).toString('ascii')
         const serialNumber = (await (await this.services.INFO.getCharacteristic('00002a25-0000-1000-8000-00805f9b34fb')).readValue()).toString('ascii')
-        const firmwareRevision = (await (await this.services.INFO.getCharacteristic('00002a26-0000-1000-8000-00805f9b34fb')).readValue()).toString('ascii')
+        const firmwareVersion = (await (await this.services.INFO.getCharacteristic('00002a26-0000-1000-8000-00805f9b34fb')).readValue()).toString('ascii')
         const name = await this.device.getName()
+        const MACAddress = await this.device.getAddress()
 
         return {
             name,
             modelNumber,
             serialNumber,
-            firmwareRevision,
-            batteryLevel
+            firmwareVersion,
+            batteryLevel,
+            MACAddress
         }
     }
 

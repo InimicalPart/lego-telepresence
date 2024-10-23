@@ -1,5 +1,5 @@
 import { LTPGlobal } from '@/interfaces/global';
-import { generateWSID } from '@/utils/ws';
+import { generateWSID, InimizedWS, inimizeWSClient } from '@/utils/ws';
 import { send } from 'process';
 
 declare const global: LTPGlobal;
@@ -7,10 +7,11 @@ declare const global: LTPGlobal;
 export async function GET(){}
 
 export async function SOCKET(
-    client: import('ws').WebSocket,
+    client: InimizedWS,
     request: import('http').IncomingMessage,
     server: import('ws').WebSocketServer,
   ) {
+    client = await inimizeWSClient(client);
     console.log("[WS] A camera client has connected");
     client.send(JSON.stringify({type: "identify"}));
     client.on('close', () => {
@@ -34,6 +35,7 @@ export async function SOCKET(
         switch (data.type) {
             case "identify":
                 delete data.type;
+                delete data.nonce;
                 if (global.connections.filter(conn=>!!conn.cam).some(cam => cam?.cam?.serialNumber === data.serialNumber)) {
                     return client.send(JSON.stringify({error: "Camera already connected"}));
                 }

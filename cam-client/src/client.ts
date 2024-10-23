@@ -5,6 +5,7 @@ import axios from "axios";
 import path from "path";
 import { WebSocket } from "ws";
 import GoProClient from "./lib/gopro.js";
+import si from "systeminformation"
 
 declare const global: CamClientGlobal;
 
@@ -55,7 +56,6 @@ function registerHandlers() {
         console.log("Reconnecting in 30 seconds...");
         setTimeout(() => {
             socket = new WebSocket(process.env.WS_URL);
-            registerHandlers();
         }, 30000);
     })
 
@@ -66,7 +66,6 @@ function registerHandlers() {
         if (willReconnect) {
             setTimeout(() => {
                 socket = new WebSocket(process.env.WS_URL);
-                registerHandlers();
             }, 30000);
         }
     })
@@ -87,68 +86,71 @@ async function parseMessage(message: string) {
 async function processMessage(data: any) {
     if (!isConnected) {
         if (!camera.isSleeping || data.type != "wake") {
-            return socket.send(JSON.stringify({error: "Camera not connected"}));
+            return socket.send(JSON.stringify({error: "Camera not connected", nonce: data.nonce}));
         }
     }
     switch (data.type) {
         case "identify":
-            await sendIdentification();
+            await sendIdentification(data.nonce);
             break;
         case "status":
-            await sendStatus();
+            await sendStatus(data.nonce);
             break;
         case "battery":
-            await sendBatteryLevel();
+            await sendBatteryLevel(data.nonce);
             break;
         case "startBroadcast":
             await startBroadcast(data);
-            await sendOK();
+            await sendOK(data.nonce);
             break;
         case "stopBroadcast":
             await stopBroadcast();
-            await sendOK();
+            await sendOK(data.nonce);
             break;
         case "connectToWiFi":
-            await connectToWiFi(data);
+            await connectToWiFi(data.nonce, data);
             break;
         case "sleep":
             await camera.sleep();
-            await sendOK();
+            await sendOK(data.nonce);
             break;
         case "powerOff":
             await camera.powerOff();
-            await sendOK();
+            await sendOK(data.nonce);
             break;
         case "wake":
             await camera.wake();
-            await sendOK();
+            await sendOK(data.nonce);
             break;
         case "keepAlive":
             await camera.toggleKeepAlive(data.enabled ?? true)
-            await sendOK();
+            await sendOK(data.nonce);
+            break;
+        case "system":
+            socket.send(JSON.stringify({type: "system", model: await getModel(), hostname: await getHostname(), os: await getSystemOSName(), nonce: data.nonce}));
             break;
         default:
             break;
     }
 }
 
-async function sendStatus() {
-    socket.send(JSON.stringify({type: "status", connected: isConnected, sleeping: !isConnected && camera.isSleeping}));
+async function sendStatus(nonce: string) {
+    socket.send(JSON.stringify({type: "status", connected: isConnected, sleeping: !isConnected && camera.isSleeping, nonce}));
 }
 
-async function sendBatteryLevel() {
+async function sendBatteryLevel(nonce: string) {
     const batteryLevel = isConnected ? await camera.getBatteryLevel() : 0;
-    socket.send(JSON.stringify({type: "battery", level: batteryLevel}));
+    socket.send(JSON.stringify({type: "battery", level: batteryLevel, nonce}));
 }
 
-async function sendIdentification() {
+async function sendIdentification(nonce: string) {
     const info = await camera.getInfo();
     delete info.batteryLevel;
-    socket.send(JSON.stringify({type: "identify", ...info}));
+    socket.send(JSON.stringify({type: "identify", ...info, nonce}));
 }
 
-async function sendOK() {
-    socket.send(JSON.stringify({type: "ok"}));
+async function sendOK(nonce: string) {
+    socket.send(JSON.stringify({type: "ok", nonce}));
 }
 
 async function startBroadcast(data: any) {
@@ -167,7 +169,35 @@ async function stopBroadcast() {
     await camera.stopCapture();
 }
 
-async function connectToWiFi(data) {
+async function getSystemOSName() {
+    try {
+        return readFileSync("/etc/os-release", {encoding: "utf-8"}).match(/PRETTY_NAME="(.*)"/)[1];
+    } catch (e) {
+        return "Unknown";
+    }
+}
+ 
+async function getModel() {
+    try {
+        return readFileSync("/proc/device-tree/model", {encoding: "utf-8"});
+    } catch (e) {
+        try {
+            return (await si.system()).model;
+        } catch (e) {
+            return "Unknown";
+        }   
+    }
+}
+
+async function getHostname() {
+    try {
+        return readFileSync("/etc/hostname", {encoding: "utf-8"});
+    } catch (e) {
+        return "Unknown";
+    }
+}
+
+async function connectToWiFi(nonce: string, data) {
     await camera.scanAvailableAPs()
     
     let scanId	= null;
@@ -177,7 +207,7 @@ async function connectToWiFi(data) {
         scanId = response.scanId
         totalEntries = response.totalEntries
     } else {
-        socket.send(JSON.stringify({error: "Scanning failed"}))
+        socket.send(JSON.stringify({error: "Scanning failed", nonce}))
         return
     }
     
@@ -185,7 +215,7 @@ async function connectToWiFi(data) {
     const ap = (await camera.waitForProtoResponse("02", "83")).entries.find((a: any) => a.ssid == data.ssid)
     
     if (!ap) {
-        socket.send(JSON.stringify({error: "AP not found"}))
+        socket.send(JSON.stringify({error: "AP not found", nonce}))
         return
     }
     
@@ -214,12 +244,12 @@ async function connectToWiFi(data) {
                     "11": "PROVISIONING_ERROR_UNSUPPORTED_TYPE"
                 }
 
-                socket.send(JSON.stringify({error: provisioningStateMap[response.provisioningState]}))
+                socket.send(JSON.stringify({error: provisioningStateMap[response.provisioningState], nonce}))
                 return
             }
     }
 
-    await sendOK()
+    await sendOK(nonce)
 }
 
 async function sleep(ms: number) {
