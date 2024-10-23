@@ -14,7 +14,7 @@ To do this, we need to do the following:
     To easily find where this is located, you can run a search on your computer for "next-ws-cli", or you can Google the location for NPX downloads on your system.
  3. We should now see a file called ``program.cjs``. Open it up in your favorite text editor.
  4. In the file, search for ``src/patches/patch-3.ts``. As it takes you to where that string is located, you will see an object (``{}``), containing the properties "``date``" and "``supported``".
- 5. In "``supported``" change the value after ``<=`` to be ``15.0.0``. The "``supported``" should now consist of the following text: "``>=13.5.1 <=15.0.0``"
+ 5. In "``supported``" change the value after ``<=`` to be ``16.0.0``. The "``supported``" should now consist of the following text: "``>=13.5.1 <=16.0.0``"
  6. Save the file and re-run the command in the first step.
 
 **Note:** When installing ``next-ws`` and ``ws``, you might get an error about dependency conflicts, to resolve this issue, re-run the install command with ``--force`` at the end.
