@@ -1,15 +1,16 @@
 import { LTPGlobal } from '@/interfaces/global';
-import { generateWSID } from '@/utils/ws';
+import { generateWSID, InimizedWS, inimizeWSClient } from '@/utils/ws';
 import { send } from 'process';
 
 declare const global: LTPGlobal;
 export async function GET(){}
 
 export async function SOCKET(
-    client: import('ws').WebSocket,
+    client: InimizedWS,
     request: import('http').IncomingMessage,
     server: import('ws').WebSocketServer,
   ) {
+    client = await inimizeWSClient(client);
     console.log("[WS] A car client has connected");
     client.send(JSON.stringify({type: "identify"}));
     client.on('close', () => {
@@ -33,7 +34,9 @@ export async function SOCKET(
         switch (data.type) {
             case "identify":
                 delete data.type;
+                delete data.nonce;
                 if (global.connections.filter(conn=>!conn.cam).some(car => car?.car?.MACAddress.toUpperCase() === data.MACAddress.toUpperCase())) {
+                    console.log(`[WS] Car already connected: ${data.MACAddress.toUpperCase()}`);
                     return client.send(JSON.stringify({error: "Car already connected"}));
                 }
                 global.connections.push({

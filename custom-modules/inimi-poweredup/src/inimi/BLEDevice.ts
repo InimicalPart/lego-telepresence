@@ -20,18 +20,26 @@ export class BLEDevice {
         device.getName().then((name) => this.name = name);
         this.connecting = false;
         this.connected = false;
+
+
+        device.on("connect", () => {
+            this.connecting = false;
+            this.connected = true;
+        })
+
+        device.on("disconnect", () => {
+            this.connecting = false;
+            this.connected = false;
+        })
     }
 
 
     async connect() {
         this.connecting = true;
         await this.device.connect();
-        this.connecting = false;
-        this.connected = true;
     }
 
     async disconnect() {
-        this.connected = false;
         await this.device.disconnect();
     }
 
