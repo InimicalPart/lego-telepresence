@@ -10,8 +10,9 @@ declare const global: LTPGlobal
 export default function BatteryFetcher({
     id,
     asIcon = false,
-    size = 24
-}: {id:string, asIcon?:boolean, size?:number}) {
+    size = 24,
+    delay = 1000
+}: {id:string, asIcon?:boolean, size?:number, delay?:number}) {
     const [battery, setBattery] = useState(-1);
     let ws: WebSocket | null = null;
     let checkTimer: NodeJS.Timeout | null = null;
@@ -51,26 +52,21 @@ export default function BatteryFetcher({
         }
     },[])
 
-    return <>
-        <Tooltip showArrow={true} hidden={false} content={
-            <p>{battery !== -1 ? battery + "%" : "???"}</p>
-        } style={{
-            zIndex:40,
-            pointerEvents: "all"
-        }}>
+    return <Tooltip delay={delay} placement="bottom" showArrow={true} content={<p>{battery !== -1 ? battery + "%" : "???"}</p>} classNames={{base: ["before:bg-neutral-700 dark:before:bg-black"], content: ["py-2 px-4 shadow-xl", "text-white bg-neutral-900"]}}>
         {
-        asIcon ? (
-                
-                    battery === -1 ? <QuestionMark size={size}/> :
-                    battery > 75 ? <Battery.FULL size={size}/> :
-                    battery > 50 ? <Battery.THREE_QUARTERS size={size}/> :
-                    battery > 25 ? <Battery.HALF size={size}/> :
-                    battery > 10 ? <Battery.QUARTER size={size}/> :
-                    <Battery.EMPTY size={size}/>
-                
+            asIcon ? (
+                <div>
+                    {
+                        battery === -1 ? <QuestionMark size={size}/> :
+                        battery > 75 ? <Battery.FULL size={size}/> :
+                        battery > 50 ? <Battery.THREE_QUARTERS size={size}/> :
+                        battery > 25 ? <Battery.HALF size={size}/> :
+                        battery > 10 ? <Battery.QUARTER size={size}/> :
+                        <Battery.EMPTY size={size}/>
+                    }   
+                </div>
             ) : 
             battery 
         }
-            </Tooltip>
-    </>
+    </Tooltip>
 }

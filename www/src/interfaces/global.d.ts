@@ -12,6 +12,7 @@ interface LTPGlobal extends NodeJS.Global {
                 modelNumber: string,
                 firmwareVersion: string
                 serialNumber: string,
+                ssid: string,
             },
             car?: {
                 name: string,
