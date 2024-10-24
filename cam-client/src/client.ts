@@ -145,8 +145,10 @@ async function sendBatteryLevel(nonce: string) {
 
 async function sendIdentification(nonce: string) {
     const info = await camera.getInfo();
+    const wifiInfo = await camera.getOwnAPInfo();
     delete info.batteryLevel;
-    socket.send(JSON.stringify({type: "identify", ...info, nonce}));
+    delete wifiInfo.password;
+    socket.send(JSON.stringify({type: "identify", ...info, ...wifiInfo, nonce}));
 }
 
 async function sendOK(nonce: string) {

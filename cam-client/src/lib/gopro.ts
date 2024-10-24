@@ -60,21 +60,24 @@ export default class GoProClient {
     private logger = (...args: any[]) => (this.debug ? console.log : () => {})(...args)
     
     private services: {
-        FEA6: GattService,
-        INFO: GattService,
-        BATTERY: GattService,
+        FEA6: GattService
+        INFO: GattService
+        BATTERY: GattService
         GP0090: GattService
+        GP0001: GattService
     } = {} as any
 
     private characteristics: {
         request: {
             COMMAND: GattCharacteristic
             SETTINGS: GattCharacteristic
+            QUERY: GattCharacteristic
             NETWORK_MANAGEMENT: GattCharacteristic
         },
         response: {
             COMMAND_RESP: GattCharacteristic
             SETTINGS_RESP: GattCharacteristic
+            QUERY_RESP: GattCharacteristic
             NETWORK_MANAGEMENT_RESP: GattCharacteristic
         },
     } = {
@@ -195,12 +198,15 @@ export default class GoProClient {
         this.services.INFO = await this.gatt.getPrimaryService('0000180a-0000-1000-8000-00805f9b34fb')
         this.services.BATTERY = await this.gatt.getPrimaryService('0000180f-0000-1000-8000-00805f9b34fb')
         this.services.GP0090 = await this.gatt.getPrimaryService('b5f90090-aa8d-11e3-9046-0002a5d5c51b')
+        this.services.GP0001 = await this.gatt.getPrimaryService('b5f90001-aa8d-11e3-9046-0002a5d5c51b')
 
 
         this.characteristics.request.COMMAND = await this.services.FEA6.getCharacteristic('b5f90072-aa8d-11e3-9046-0002a5d5c51b')
         this.characteristics.response.COMMAND_RESP = await this.services.FEA6.getCharacteristic('b5f90073-aa8d-11e3-9046-0002a5d5c51b')
-        this.characteristics.request.SETTINGS = await this.services.FEA6.getCharacteristic('b5f90072-aa8d-11e3-9046-0002a5d5c51b')
-        this.characteristics.response.SETTINGS_RESP = await this.services.FEA6.getCharacteristic('b5f90073-aa8d-11e3-9046-0002a5d5c51b')
+        this.characteristics.request.SETTINGS = await this.services.FEA6.getCharacteristic('b5f90074-aa8d-11e3-9046-0002a5d5c51b')
+        this.characteristics.response.SETTINGS_RESP = await this.services.FEA6.getCharacteristic('b5f90075-aa8d-11e3-9046-0002a5d5c51b')
+        this.characteristics.request.QUERY = await this.services.FEA6.getCharacteristic('b5f90076-aa8d-11e3-9046-0002a5d5c51b')
+        this.characteristics.response.QUERY_RESP = await this.services.FEA6.getCharacteristic('b5f90077-aa8d-11e3-9046-0002a5d5c51b')
         this.characteristics.request.NETWORK_MANAGEMENT = await this.services.GP0090.getCharacteristic('b5f90091-aa8d-11e3-9046-0002a5d5c51b')
         this.characteristics.response.NETWORK_MANAGEMENT_RESP = await this.services.GP0090.getCharacteristic('b5f90092-aa8d-11e3-9046-0002a5d5c51b')
 
@@ -215,12 +221,14 @@ export default class GoProClient {
 
     private async startListening() {
         await this.characteristics.response.COMMAND_RESP.startNotifications()
-        await this.characteristics.response.NETWORK_MANAGEMENT_RESP.startNotifications()
         await this.characteristics.response.SETTINGS_RESP.startNotifications()
+        await this.characteristics.response.QUERY_RESP.startNotifications()
+        await this.characteristics.response.NETWORK_MANAGEMENT_RESP.startNotifications()
 
         this.characteristics.response.COMMAND_RESP.on('valuechanged', (b)=>this.parseReponse(b))
-        this.characteristics.response.NETWORK_MANAGEMENT_RESP.on('valuechanged', (b)=>this.parseReponse(b))
         this.characteristics.response.SETTINGS_RESP.on('valuechanged', (b)=>this.parseReponse(b))
+        this.characteristics.response.QUERY_RESP.on('valuechanged', (b)=>this.parseReponse(b))
+        this.characteristics.response.NETWORK_MANAGEMENT_RESP.on('valuechanged', (b)=>this.parseReponse(b))
         console.log("Listening for responses")
     }
 
@@ -399,8 +407,9 @@ export default class GoProClient {
     async cleanup(): Promise<void> {
         this.logger("Cleaning up...")
         await this.characteristics.response.COMMAND_RESP.stopNotifications()
-        await this.characteristics.response.NETWORK_MANAGEMENT_RESP.stopNotifications()
         await this.characteristics.response.SETTINGS_RESP.stopNotifications()
+        await this.characteristics.response.QUERY_RESP.stopNotifications()
+        await this.characteristics.response.NETWORK_MANAGEMENT_RESP.stopNotifications()
         await this.device.disconnect()
         destroy()
         this.logger("Cleaned up")
@@ -408,11 +417,27 @@ export default class GoProClient {
 
     private async keepAliveCmd() {
         if (this.keepAlive && await this.device.isConnected() == true as any) {
-            this.characteristics.request.SETTINGS.writeValue(this.getTLVByteArray("5B","42"))
+            await this.characteristics.request.SETTINGS.writeValue(this.getTLVByteArray("5B","42"))
         }
     }
 
+
     //! -- COMMANDS -- !\\
+
+    /**
+     * @description Get the GoPro's Access Point information
+     * @returns {Promise<{ssid: string, password: string}>} The SSID and password of the GoPro's Access Point
+     */
+    async getOwnAPInfo(): Promise<{ ssid: string; password: string }> {
+        const ssid = (await (await this.services.GP0001.getCharacteristic('b5f90002-aa8d-11e3-9046-0002a5d5c51b')).readValue()).toString('ascii')
+        const password = (await (await this.services.GP0001.getCharacteristic('b5f90003-aa8d-11e3-9046-0002a5d5c51b')).readValue()).toString('ascii')
+        
+        console.log("SSID:", ssid)
+        console.log("Password", password)
+
+        return {ssid, password}
+    }
+
 
     /**
      * @description Get information about the GoPro (name, model number, serial number, firmware revision, battery level)

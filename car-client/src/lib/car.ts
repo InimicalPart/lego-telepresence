@@ -24,6 +24,8 @@ export default class TechnicClient {
         this.debug = debug
     }
 
+    private deviceFound: boolean = false;
+
     async connect(timeout=30000) {
         return new Promise((resolve, reject) => {
 
@@ -38,7 +40,9 @@ export default class TechnicClient {
                 hub: Hub,
                 peripheral: Device
             }) => {
-                if ((await data.peripheral.getAddress()).toUpperCase() == this.MAC) {
+                if ((await data.peripheral.getAddress()).toUpperCase() == this.MAC && !this.deviceFound) {
+                    this.deviceFound = true;
+                    poweredUP.removeAllListeners("discover")
                     clearTimeout(timeoutTimer)
                     poweredUP.stop();
                     this.logger(`Discovered ${data.hub.name}!`)
