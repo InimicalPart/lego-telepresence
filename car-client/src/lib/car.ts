@@ -47,7 +47,14 @@ export default class TechnicClient {
                     poweredUP.stop();
                     this.logger(`Discovered ${data.hub.name}!`)
                     this.logger("Connecting to Technic Hub with MAC", this.MAC)
-                    await data.hub.connect();
+                    try {
+                        await data.hub.connect();
+                    } catch (e) {
+                        this.logger("Failed to connect to Technic Hub with MAC (is it paired?)", this.MAC)
+                        this.deviceFound = false;
+                        reject("UNABLE_TO_CONNECT")
+                        return
+                    }
                     this.logger("Connected to Technic Hub with MAC", this.MAC)
                     this.connected = true
                     this.hub = data.hub

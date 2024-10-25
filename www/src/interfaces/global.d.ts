@@ -13,6 +13,7 @@ interface LTPGlobal extends NodeJS.Global {
                 firmwareVersion: string
                 serialNumber: string,
                 ssid: string,
+                isLive: any;
             },
             car?: {
                 name: string,
@@ -21,6 +22,7 @@ interface LTPGlobal extends NodeJS.Global {
                 hardwareVersion: string,
                 cameraSerial: string,
             },
+            ready: boolean,
             connection: InimizedWS,
         }[]
 }

@@ -23,11 +23,13 @@ export class PoweredUP extends EventEmitter {
         super();
         this.discoverDetectionInterval = setInterval(async () => {
             if (!adapter.isDiscovering() || !wantScan)
-                return;
+                return this.knownDevices = [];
             const allDevices = await adapter.devices();
             const newDevices = allDevices.filter((device) => !this.knownDevices.includes(device));
             for (const device of newDevices) {
-                const peripheral = await adapter.getDevice(device);
+                const peripheral = await adapter.getDevice(device).catch((e) => { });
+                if (!peripheral)
+                    continue;
                 if (await isMatchingPeripheral(peripheral)) {
                     this.onDiscover(peripheral);
                 }

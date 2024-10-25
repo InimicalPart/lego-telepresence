@@ -129,7 +129,14 @@ export default class GoProClient {
         }
         this.logger("Found GoPro, connecting...")
         await adapter.stopDiscovery().catch((e)=>{})
-        await device.connect()
+        try {
+            await device.connect()
+        } catch (e) {
+            this.logger("Failed to connect to GoPro (might not be paired), retrying in 30 seconds...")
+            setTimeout(()=>this.attemptReconnect(), 30000)
+            return
+        }
+
         this.isSleeping = false
         this.logger("Connected to GoPro")
         this.events.emit("connect")
@@ -139,7 +146,7 @@ export default class GoProClient {
         }
 
 
-        device.off("disconnect", () => this.onDisconnect())
+        device.removeAllListeners("disconnect")
 
         device.on("disconnect", () => this.onDisconnect())
 
@@ -174,6 +181,7 @@ export default class GoProClient {
         } else {
             this.logger("GoPro disconnected because the user put it to sleep")
         }
+        await this.stopListen()
     }
 
     private async attemptReconnect() {
@@ -219,7 +227,21 @@ export default class GoProClient {
         this.events.emit("ready")
     }
 
+    private async stopListen() {
+        await this.characteristics.response.COMMAND_RESP.stopNotifications().catch(()=>{})
+        await this.characteristics.response.SETTINGS_RESP.stopNotifications().catch(()=>{})
+        await this.characteristics.response.QUERY_RESP.stopNotifications().catch(()=>{})
+        await this.characteristics.response.NETWORK_MANAGEMENT_RESP.stopNotifications().catch(()=>{})
+        
+        this.characteristics.response.COMMAND_RESP.removeAllListeners('valuechanged')
+        this.characteristics.response.SETTINGS_RESP.removeAllListeners('valuechanged')
+        this.characteristics.response.QUERY_RESP.removeAllListeners('valuechanged')
+        this.characteristics.response.NETWORK_MANAGEMENT_RESP.removeAllListeners('valuechanged')
+
+    }
+
     private async startListening() {
+
         await this.characteristics.response.COMMAND_RESP.startNotifications()
         await this.characteristics.response.SETTINGS_RESP.startNotifications()
         await this.characteristics.response.QUERY_RESP.startNotifications()
@@ -229,7 +251,7 @@ export default class GoProClient {
         this.characteristics.response.SETTINGS_RESP.on('valuechanged', (b)=>this.parseReponse(b))
         this.characteristics.response.QUERY_RESP.on('valuechanged', (b)=>this.parseReponse(b))
         this.characteristics.response.NETWORK_MANAGEMENT_RESP.on('valuechanged', (b)=>this.parseReponse(b))
-        console.log("Listening for responses")
+        this.logger("Listening for responses")
     }
 
     private async parseReponse(buffer: Buffer) {
@@ -406,11 +428,8 @@ export default class GoProClient {
      */
     async cleanup(): Promise<void> {
         this.logger("Cleaning up...")
-        await this.characteristics.response.COMMAND_RESP.stopNotifications()
-        await this.characteristics.response.SETTINGS_RESP.stopNotifications()
-        await this.characteristics.response.QUERY_RESP.stopNotifications()
-        await this.characteristics.response.NETWORK_MANAGEMENT_RESP.stopNotifications()
-        await this.device.disconnect()
+        await this.stopListen().catch(()=>{})
+        await this.device.disconnect().catch(()=>{})
         destroy()
         this.logger("Cleaned up")
     }
@@ -431,9 +450,6 @@ export default class GoProClient {
     async getOwnAPInfo(): Promise<{ ssid: string; password: string }> {
         const ssid = (await (await this.services.GP0001.getCharacteristic('b5f90002-aa8d-11e3-9046-0002a5d5c51b')).readValue()).toString('ascii')
         const password = (await (await this.services.GP0001.getCharacteristic('b5f90003-aa8d-11e3-9046-0002a5d5c51b')).readValue()).toString('ascii')
-        
-        console.log("SSID:", ssid)
-        console.log("Password", password)
 
         return {ssid, password}
     }
@@ -604,7 +620,7 @@ export default class GoProClient {
      * @returns {Promise<void>}
      */
     async startCapture(): Promise<void> {
-        this.characteristics.request.COMMAND.writeValue(this.getTLVByteArray("01", "01"))
+        await this.characteristics.request.COMMAND.writeValue(this.getTLVByteArray("01", "01"))
     }
     
     /**
@@ -612,7 +628,7 @@ export default class GoProClient {
      * @returns {Promise<void>}
      */
     async stopCapture(): Promise<void> {
-        this.characteristics.request.COMMAND.writeValue(this.getTLVByteArray("01", "00"))
+        await this.characteristics.request.COMMAND.writeValue(this.getTLVByteArray("01", "00"))
     }
     
     /**

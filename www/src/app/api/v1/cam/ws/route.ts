@@ -43,11 +43,15 @@ export async function SOCKET(
                     id: await generateWSID(),
                     type: "cam",
                     cam: data,
-                    connection: client
+                    connection: client,
+                    ready: false
                 });
                 client.send(JSON.stringify({type: "connected"}));
                 console.log(`[WS] Camera connected: ${data.serialNumber}`);
                 client.send(JSON.stringify({type: "keepAlive", enabled: true}));
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                client.send(JSON.stringify({type: "stopBroadcast"})) // Stop any ongoing broadcasts / captures
+                client.send(JSON.stringify({type: "sleep"})) // Put the camera to sleep to save power
                 break;
             case "ok":
                 console.log(`[WS] Camera responded with OK`);

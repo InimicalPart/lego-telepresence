@@ -34,14 +34,27 @@ export async function SOCKET(
             case "query":
                 const connId = data.id;
                 const query = data.query;
-                const conn = global.connections.find(conn => conn.id === connId);
+                const conn = global.connections.find(conn => conn.id === connId)
 
                 if (!conn) {
                     console.log(`[WS] User requested data from non-existent connection: ${connId}`);
                     return client.send(JSON.stringify({error: "Connection not found"}));
                 }
 
-                const allowedQueries = ["status", "battery"];
+
+
+                if (query == "streaming") {
+                    if (!conn.cam) {
+                        console.log(`[WS] User requested streaming status from non-camera connection: ${connId}`);
+                        return client.send(JSON.stringify({error: "Connection is not a camera"}));
+                    }
+
+                    return client.send(JSON.stringify({"type": "streaming", streaming: conn.cam.isLive}));
+                }
+
+                const allowedQueries = conn.type=="car"?
+                ["status", "battery"] :
+                ["status", "battery", "getInfo"];
                 if (!allowedQueries.includes(query)) {
                     console.log(`[WS] User requested invalid query: ${query}`);
                     return client.send(JSON.stringify({error: "Invalid query"}));
@@ -50,9 +63,25 @@ export async function SOCKET(
                 conn.connection.sendAndAwait({type: query}).then((response) => {
                     client.send(JSON.stringify(response));
                 }).catch((error) => {
-                    console.log(`[WS] Error sending query: ${error}`);
+                    console.log(`[WS] Error sending query "${query}": ${error}`);
                     client.send(JSON.stringify({error: "Error sending query"}));
                 })
+                break;
+            case "setup":
+                const carId = data.id;
+
+
+                const car = global.connections.find(conn => conn.id === carId && conn.type === "car")
+
+                if (!car) {
+                    console.log(`[WS] User requested setup for non-existent car: ${carId}`);
+                    return client.send(JSON.stringify({error: "Car not found"}));
+                }
+
+                const camera = !!car.car?.cameraSerial ? global.connections.find(conn => conn.cam?.serialNumber === car.car?.cameraSerial && conn.type == "cam") : null; 
+                
+                const alreadySetup = !!car.car?.cameraSerial;
+
                 break;
             default:
                 console.log(`[WS] Unknown message type: ${data.type}`);
