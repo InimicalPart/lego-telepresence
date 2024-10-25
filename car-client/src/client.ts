@@ -107,7 +107,8 @@ async function processMessage(data: any) {
     }
 }
 
-async function sendStatus(nonce: string ) {
+async function sendStatus(nonce: string) {
+    socket.send(JSON.stringify({type: "status", connected: isConnected, nonce}));
 }
 
 async function sendBatteryLevel(nonce: string) {

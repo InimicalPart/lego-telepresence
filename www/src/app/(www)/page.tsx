@@ -7,6 +7,8 @@ import { useState } from "react"
 import "@/styles/pulse-dot.css"
 import BatteryFetcher from "@/components/batteryFetcher"
 import MpegTSVideo from "@/components/mpegts-video"
+import Player from "@/components/player"
+import Link from "next/link"
 declare const global: LTPGlobal
 
 export default async function Home() {
@@ -26,6 +28,8 @@ export default async function Home() {
         const hostname = carHost?.hostname == camHost?.hostname ? carHost?.hostname : "Unknown - Mismatch"
         const osName = carHost?.os == camHost?.os ? carHost?.os : "Unknown - Mismatch"
 
+        const isStreaming = !!camera ? camera.cam?.isLive : false
+
         return (
             <Card key={i}>
                 <CardHeader className="flex flex-row justify-center items-center">
@@ -37,16 +41,9 @@ export default async function Home() {
                 </CardHeader>
                 <Divider orientation="horizontal"/>
                 <CardBody>
-
-                <div className="w-[300px] h-[150px] relative">
-                    <MpegTSVideo url="ws://localhost:8000/live/obs.flv" type="mse" className="absolute">
-                        <div className="w-full h-full bg-gray-500 z-20 absolute"></div>
-                    </MpegTSVideo>
-                </div>
-                <Spacer y={1.5}/>
-
-
-                    <Button variant="flat" color="primary">
+                    <Player cameraId={camera?.id as string} className={"rounded-xl"}/>
+                    <Spacer y={1.5}/>
+                    <Button variant="flat" color="primary" as={Link} href={"/"+car.id+"/control"}>
                         Control
                     </Button>
                 </CardBody>

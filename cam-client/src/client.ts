@@ -13,6 +13,11 @@ declare const global: CamClientGlobal;
 global.config = parse(readFileSync("./config.jsonc", { encoding: "utf-8" }));
 let isConnected = false;
 
+let isBusy = false;
+let msgQueue = [
+
+]
+
 if (global.config.DEVELOPMENT) {
     config({path: "./.env.development"});
 } else {
@@ -71,27 +76,61 @@ function registerHandlers() {
     })
 
     socket.on("message", parseMessage);
+    setInterval(processQueue, 100);
 }
 
 
 async function parseMessage(message: string) {
     try {
         const data = JSON.parse(message);
-        processMessage(data);
+        
+        if (isBusy) {
+            console.log("Camera is busy, adding message to queue:", data);
+            msgQueue.push(data);
+            return;
+        }
+        
+        isBusy = true;
+        await processMessage(data);
+        isBusy = false;
     } catch (error) {
         console.warn(`Error parsing message: ${error}`);
     }
 }
 
-async function processMessage(data: any) {
-    if (!isConnected) {
-        if (!camera.isSleeping || data.type != "wake") {
-            return socket.send(JSON.stringify({error: "Camera not connected", nonce: data.nonce}));
+
+async function processQueue() {
+    if (!isBusy) {
+        const next = msgQueue.shift();
+        if (next) {
+            console.log("Processing next message in queue ("+msgQueue.length+" remain):", next);
+            isBusy = true;
+            await processMessage(next);
+            isBusy = false;
         }
     }
+}
+
+async function processMessage(data: any) {
+    console.log("Processing message:", data);
+    if (!isConnected) {
+        if (!camera.isSleeping) {
+            return socket.send(JSON.stringify({error: "Camera not connected", nonce: data.nonce}));
+        } else {
+            if (!["system", "status"].includes(data.type)) {
+                await camera.wake();
+            }
+        }
+    }
+
+
+
     switch (data.type) {
         case "identify":
             await sendIdentification(data.nonce);
+            break;
+        case "getInfo":
+            await getInfo(data.nonce);
             break;
         case "status":
             await sendStatus(data.nonce);
@@ -132,6 +171,8 @@ async function processMessage(data: any) {
         default:
             break;
     }
+
+    console.log("Message processed");
 }
 
 async function sendStatus(nonce: string) {
@@ -144,11 +185,22 @@ async function sendBatteryLevel(nonce: string) {
 }
 
 async function sendIdentification(nonce: string) {
+    const info = await getCameraInformation();
+    return socket.send(JSON.stringify({type: "identify", ...info, nonce}));
+}
+
+async function getInfo(nonce: string) {
+    const info = await getCameraInformation();
+    return socket.send(JSON.stringify({type: "getInfo", ...info, nonce}));
+}
+
+
+async function getCameraInformation() {
     const info = await camera.getInfo();
     const wifiInfo = await camera.getOwnAPInfo();
     delete info.batteryLevel;
     delete wifiInfo.password;
-    socket.send(JSON.stringify({type: "identify", ...info, ...wifiInfo, nonce}));
+    return {...info, ...wifiInfo};
 }
 
 async function sendOK(nonce: string) {
