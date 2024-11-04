@@ -7,8 +7,7 @@
     "car-install": "npm install --prefix car-client",
     "www-install": "npm install --prefix www --force",
     "cam-install": "npm install --prefix cam-client",
-    "custom-install": "npm install --prefix custom-modules/inimi-ble && npm install --prefix custom-modules/inimi-poweredup",
-    "install": "npm run custom-install && npm run car-install && npm run cam-install && npm run www-install",
+    "install": "npm run car-install && npm run cam-install && npm run www-install",
     "postinstall": "cd www && npx next-ws-cli@latest patch --yes && cd .."
   },
   "keywords": [],

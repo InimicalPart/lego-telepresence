@@ -114,7 +114,7 @@ export default class GoProClient {
         this.debug = debug
     }
 
-    async connect() {
+    async connect(retry: boolean = true) {
         if (this.device) {
             this.device.disconnect()
             this.device.removeAllListeners()
@@ -123,6 +123,10 @@ export default class GoProClient {
         await adapter.startDiscovery().catch((e)=>{})
         const device = await adapter.waitDevice(this.MAC, 120000, 1000)
         if (!device) {
+            if (!retry) {
+                this.logger("Failed to find GoPro")
+                return
+            }
             this.logger("Failed to find GoPro, retrying in 30 seconds...")
             setTimeout(()=>this.attemptReconnect(), 30000)
             return
@@ -132,6 +136,10 @@ export default class GoProClient {
         try {
             await device.connect()
         } catch (e) {
+            if (!retry) {
+                this.logger("Failed to connect to GoPro (might not be paired)")
+                return
+            }
             this.logger("Failed to connect to GoPro (might not be paired), retrying in 30 seconds...")
             setTimeout(()=>this.attemptReconnect(), 30000)
             return
@@ -155,6 +163,10 @@ export default class GoProClient {
             while (!device.isPaired()) {
                 await device.pair()
                 if (!device.isPaired()) {
+                    if (!retry) {
+                        this.logger("Failed to pair")
+                        return
+                    }
                     this.logger("Failed to pair, retrying...")
                     await new Promise(resolve => setTimeout(resolve, 1000))
                 }
@@ -184,9 +196,9 @@ export default class GoProClient {
         await this.stopListen()
     }
 
-    private async attemptReconnect() {
+    private async attemptReconnect(retry?: boolean) {
         try {
-            await this.connect()
+            await this.connect(retry)
             return true
         } catch (error) {
             return false
@@ -382,7 +394,6 @@ export default class GoProClient {
             }
             
             this.logger(`[TLV] [${COMMAND_ID} - ${commandExecutionStatus}]${PAYLOAD || bufferString ? ":" : ""}`, PAYLOAD || bufferString)
-    
             const tlvWaitFor = this.tlvWaitForList.find((a) => a.commandId == COMMAND_ID)
             if (tlvWaitFor) {
                 tlvWaitFor.resolve(PAYLOAD)
@@ -517,7 +528,8 @@ export default class GoProClient {
      * @returns {Promise<void>}
      */
     async wake(): Promise<void> {
-        await this.attemptReconnect();
+        await this.attemptReconnect(false);
+        await sleep(1000);
     }
 
     /**
@@ -529,6 +541,11 @@ export default class GoProClient {
             await this.characteristics.request.NETWORK_MANAGEMENT.writeValue(packet)
         }
     }
+
+    async getStatusValues(): Promise<any> {
+        await this.characteristics.request.QUERY.writeValue(this.getTLVByteArray("13", "1D06081f"))
+    }
+
 
     /**
      * @description Get the results of the network scan
@@ -738,4 +755,8 @@ export default class GoProClient {
     private bin2hex(bin: string){
         return parseInt(bin, 2).toString(16);
     }
+}
+
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }

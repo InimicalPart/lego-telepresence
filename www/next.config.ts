@@ -13,7 +13,10 @@ const nextConfig: NextConfig = {
         fetches: {
             fullUrl: true,
         },
-    }
+    },
+    devIndicators: {
+        appIsrStatus: false,
+    },
 };
 
 export default nextConfig;

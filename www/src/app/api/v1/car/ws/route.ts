@@ -43,7 +43,8 @@ export async function SOCKET(
                     id: await generateWSID(),
                     type: "car",
                     car: data,
-                    connection: client
+                    connection: client,
+                    ready: false
                 });
                 client.send(JSON.stringify({type: "connected"}));
                 console.log(`[WS] Car connected: ${data.MACAddress.toUpperCase()}`);

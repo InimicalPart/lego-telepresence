@@ -30,59 +30,108 @@ export async function SOCKET(
             return;
         }
 
+        const connId = data.id;
+        const conn = global.connections.find(conn => conn.id === connId)
+        const nonce = data.nonce ?? null;
+        if (!conn) {
+            console.log(`[WS] User requested data from non-existent connection: ${connId}`);
+            return client.send(JSON.stringify({error: "Connection not found", connId, nonce}));
+        }
+
         switch (data.type) {
             case "query":
-                const connId = data.id;
                 const query = data.query;
-                const conn = global.connections.find(conn => conn.id === connId)
-
-                if (!conn) {
-                    console.log(`[WS] User requested data from non-existent connection: ${connId}`);
-                    return client.send(JSON.stringify({error: "Connection not found"}));
-                }
-
 
 
                 if (query == "streaming") {
                     if (!conn.cam) {
                         console.log(`[WS] User requested streaming status from non-camera connection: ${connId}`);
-                        return client.send(JSON.stringify({error: "Connection is not a camera"}));
+                        return client.send(JSON.stringify({error: "Connection is not a camera", connId, nonce}));
                     }
 
-                    return client.send(JSON.stringify({"type": "streaming", streaming: conn.cam.isLive}));
+                    console.log(`[WS] User requested streaming status: ${conn.cam.isLive}`);
+                    return client.send(JSON.stringify({"type": "streaming", "streaming": conn.cam.isLive, connId, nonce}));
                 }
 
                 const allowedQueries = conn.type=="car"?
                 ["status", "battery"] :
-                ["status", "battery", "getInfo"];
+                ["status", "battery", "getInfo", "getStatusValues"];
                 if (!allowedQueries.includes(query)) {
                     console.log(`[WS] User requested invalid query: ${query}`);
-                    return client.send(JSON.stringify({error: "Invalid query"}));
+                    return client.send(JSON.stringify({error: "Invalid query", connId, nonce}));
                 }
 
                 conn.connection.sendAndAwait({type: query}).then((response) => {
-                    client.send(JSON.stringify(response));
+                    client.send(JSON.stringify({...response, connId, nonce}));
                 }).catch((error) => {
                     console.log(`[WS] Error sending query "${query}": ${error}`);
-                    client.send(JSON.stringify({error: "Error sending query"}));
+                    client.send(JSON.stringify({error: "Error sending query", connId, nonce}));
                 })
                 break;
-            case "setup":
-                const carId = data.id;
-
-
-                const car = global.connections.find(conn => conn.id === carId && conn.type === "car")
-
-                if (!car) {
-                    console.log(`[WS] User requested setup for non-existent car: ${carId}`);
-                    return client.send(JSON.stringify({error: "Car not found"}));
+            case "wake":
+                if (!conn.cam) {
+                    console.log(`[WS] User requested wake from non-camera connection: ${connId}`);
+                    return client.send(JSON.stringify({error: "Connection is not a camera"}));
                 }
 
-                const camera = !!car.car?.cameraSerial ? global.connections.find(conn => conn.cam?.serialNumber === car.car?.cameraSerial && conn.type == "cam") : null; 
-                
-                const alreadySetup = !!car.car?.cameraSerial;
+                conn.connection.sendAndAwait({type: "wake"},120000).then((response) => {
+                    client.send(JSON.stringify({...response, connId, nonce}));
+                }).catch((error) => {
+                    console.log(`[WS] Error sending 'wake': ${error}`);
+                    client.send(JSON.stringify({error: "Error sending 'wake'", connId, nonce}));
+                })
+                break;
+
+            case "keepAlive":
+                if (!conn.cam) {
+                    console.log(`[WS] User requested keepAlive from non-camera connection: ${connId}`);
+                    return client.send(JSON.stringify({error: "Connection is not a camera"}));
+                }
+
+                conn.connection.send(JSON.stringify({type: "keepAlive", enabled: data.enabled}));
+                break;
+            case "restartStream":
+                // stop the broadcast with stopBroadcast, wait a few seconds, then start the broadcast with startStream, by not using the break statement, the code will continue to the next case
+                await conn.connection.sendAndAwait({type: "stopBroadcast"}).catch((error) => {
+                    console.log(`[WS] Error sending 'stopBroadcast': ${error}`);
+                    client.send(JSON.stringify({error: "Error sending 'stopBroadcast'", connId, nonce}));
+                })
+                if (conn.cam) conn.cam.isLive = false;
+                await sleep(15000);
+            case "startStream":
+                if (!conn.cam) {
+                    console.log(`[WS] User requested startStream from non-camera connection: ${connId}`);
+                    return client.send(JSON.stringify({error: "Connection is not a camera"}));
+                }
+
+
+                await conn.connection.sendAndAwait({type: "connectToWiFi", ssid: process.env.CAM_SSID, password: process.env.CAM_PASSWORD}, 30000).then((response) => {
+                    if (response.error) {
+                        console.log(`[WS] Error sending 'connectToWiFi': ${response.error}`);
+                        client.send(JSON.stringify({error: "Error sending 'connectToWiFi'", connId, nonce}));
+                    }
+                }).catch((error) => {
+                    console.log(`[WS] Error sending 'connectToWiFi': ${error}`);
+                    client.send(JSON.stringify({error: "Error sending 'connectToWiFi'", connId, nonce}));
+                })
+
+                await sleep(2000)
+
+                await conn.connection.sendAndAwait({type: "startBroadcast", url:`rtmp://192.168.1.228/remote-live/${conn?.cam?.ssid}`, options: { //TODO: MAKE THIS IP NOT HARDCODED
+                    encode: false,
+                    windowSize: 12,
+                    lens: 4
+                }}, 45000).then((response) => {
+                    if (conn.cam) conn.cam.isLive = true;
+                    client.send(JSON.stringify({...response, connId, nonce}));
+                }).catch((error) => {
+                    console.log(`[WS] Error sending 'startStream': ${error}`);
+                    client.send(JSON.stringify({error: "Error sending 'startStream'", connId, nonce}));
+                })
+
 
                 break;
+            
             default:
                 console.log(`[WS] Unknown message type: ${data.type}`);
                 console.log(data);
@@ -91,3 +140,7 @@ export async function SOCKET(
 
     })
   }
+
+async function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}

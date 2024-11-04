@@ -8,18 +8,21 @@ export default function Player({
     height = "168.75px",
     cameraId,
     className,
-    style
+    style,
+    foreverMute = false
 }: {
     width?: string,
     height?: string,
     cameraId: string|null,
     className?: any,
-    style?: any
+    style?: any,
+    foreverMute?: boolean
 }) {
 
 
     const [isStreaming, setStreaming] = useState(false)
     const [url, setUrl] = useState("");
+    const [muted, setMuted] = useState(true);
     const [checkTimer, setCheckTimer] = useState<NodeJS.Timeout | null>(null);
     useEffect(()=>{
         if (!cameraId) return;
@@ -40,9 +43,9 @@ export default function Player({
                 return;
             }
             if (data.type === "streaming") {
-                setStreaming(data.streaming);
+                setStreaming(data.streaming ?? false);
             } else if (data.type === "getInfo") {
-                setUrl(`${location.origin.replace("http","ws")}:8000/remote-live/${data.ssid.replace(/ /g, "_")}.flv`)
+                setUrl(`${location.protocol.replace("http","ws")}//${location.hostname}:8000/remote-live/${data.ssid.replace(/ /g, "_")}.flv`)
             } else if (data.type === "status") {
                 if (data.connected) {
                     if (url == "") ws.send(JSON.stringify({type: "query", id: cameraId, query: "getInfo"}));
@@ -50,6 +53,11 @@ export default function Player({
                 }
             }
         }
+
+        window.onclick = () => {
+            if (!foreverMute) setMuted(false);
+        }
+
         return () => {
             if (ws.readyState === ws.OPEN) ws.close();
             if (checkTimer) clearInterval(checkTimer);
@@ -66,13 +74,16 @@ export default function Player({
  
     return <div className={`relative ${className}`} style={{width: width, height: height, ...style}}>
         {isStreaming ?
-        <MpegTSVideo url={url} type="mse" className={`absolute ${className}`} style={style} muted>
-            <div className={`w-full h-full bg-black z-20 absolute flex justify-center items-center text-sm ${className}`} style={style}>
-                <p className="text-white">Loading...</p>
-            </div>
-        </MpegTSVideo>
+        <>
+            <MpegTSVideo url={url} type="mse" className={`relative ${className}`} style={style} muted={muted} height={height} width={width}>
+                <div className={`w-full h-full bg-black z-20 absolute flex justify-center items-center text-sm ${className}`} style={style}>
+                    <p className="text-white">Loading...</p>
+                </div>
+            </MpegTSVideo>
+            <p className="w-full text-center mt-2 text-neutral-500" hidden={!muted || foreverMute}>Click anywhere on the page to unmute</p>
+        </>
         : <div className={`w-full h-full bg-black z-20 absolute flex justify-center items-center text-sm ${className}`} style={style}>
-            <p className="text-white">Camera not available.</p>
+            <p className="text-white">Camera stream not available.</p>
         </div>
         }
     </div>

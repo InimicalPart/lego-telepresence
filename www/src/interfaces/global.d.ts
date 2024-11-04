@@ -1,5 +1,6 @@
 import { InimizedWS } from "@/utils/ws";
 import NodeMediaServer from "node-media-server";
+import { EventEmitter } from "stream";
 
 interface LTPGlobal extends NodeJS.Global {
     nms: NodeMediaServer | null,
@@ -24,5 +25,6 @@ interface LTPGlobal extends NodeJS.Global {
             },
             ready: boolean,
             connection: InimizedWS,
-        }[]
-}
+        }[],
+    events: EventEmitter
+} 
