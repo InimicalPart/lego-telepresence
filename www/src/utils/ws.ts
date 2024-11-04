@@ -39,15 +39,17 @@ export async function inimizeWSClient(wsClient: any): Promise<InimizedWS> {
 
     wsClient.send =  (data: any, options?: any, cb?: ((err?: Error) => void) | undefined) => {
 
-        const nonce =  generateNonce();
+        let nonce =  generateNonce();
         try {
             
             if (typeof data == "string") {
                 const dataJSON = JSON.parse(data);
-                dataJSON.nonce = nonce;
+                if (!dataJSON.nonce) dataJSON.nonce = nonce;
+                else nonce = dataJSON.nonce;
                 data = JSON.stringify(dataJSON);
             } else if (typeof data == "object") {
-                data.nonce = nonce;
+                if (!data.nonce) data.nonce = nonce;
+                else nonce = data.nonce;
                 data = JSON.stringify(data);
             } else {
                 console.warn(`[WS] Attempted to add nonce to invalid data type: ${typeof data}`);
@@ -66,7 +68,7 @@ export async function inimizeWSClient(wsClient: any): Promise<InimizedWS> {
     }
 
     wsClient.sendAndAwait = async (data: any, timeout: number = 5000) => {
-        const nonce = wsClient.send(data);
+        let nonce: any = null
         return new Promise((resolve, reject) => {
             const timeoutID = setTimeout(() => {
                 reject("Timeout");
@@ -86,6 +88,8 @@ export async function inimizeWSClient(wsClient: any): Promise<InimizedWS> {
             }
 
             wsClient.on('message', onMessage)
+            nonce = wsClient.send(data);
+
         })
     }
 

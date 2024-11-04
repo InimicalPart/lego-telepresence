@@ -48,8 +48,10 @@ export default class TechnicClient {
                     this.logger(`Discovered ${data.hub.name}!`)
                     this.logger("Connecting to Technic Hub with MAC", this.MAC)
                     try {
+                        await sleep(1000) // Sleep for 1 second to allow the hub to be ready
                         await data.hub.connect();
                     } catch (e) {
+                        console.warn(e.toString())
                         this.logger("Failed to connect to Technic Hub with MAC (is it paired?)", this.MAC)
                         this.deviceFound = false;
                         reject("UNABLE_TO_CONNECT")
@@ -130,4 +132,8 @@ export default class TechnicClient {
 
 
 
+}
+
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }

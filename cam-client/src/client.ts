@@ -117,7 +117,7 @@ async function processMessage(data: any) {
         if (!camera.isSleeping) {
             return socket.send(JSON.stringify({error: "Camera not connected", nonce: data.nonce}));
         } else {
-            if (!["system", "status"].includes(data.type)) {
+            if (!["system", "status", "wake"].includes(data.type)) { 
                 await camera.wake();
             }
         }
@@ -140,10 +140,12 @@ async function processMessage(data: any) {
             break;
         case "startBroadcast":
             await startBroadcast(data);
+            await sleep(2000)
             await sendOK(data.nonce);
             break;
         case "stopBroadcast":
             await stopBroadcast();
+            await sleep(2000)
             await sendOK(data.nonce);
             break;
         case "connectToWiFi":
@@ -157,8 +159,17 @@ async function processMessage(data: any) {
             await camera.powerOff();
             await sendOK(data.nonce);
             break;
+        case "getStatusValues":
+            await camera.getStatusValues();
+            const resp = await camera.waitForTlvResponse("17")
+
+            socket.send(JSON.stringify({type: "statusValues", data: resp, nonce: data.nonce}));
+            break;
         case "wake":
-            await camera.wake();
+            while (!isConnected) {
+                await camera.wake();
+                await sleep(1000);
+            }
             await sendOK(data.nonce);
             break;
         case "keepAlive":
@@ -209,13 +220,18 @@ async function sendOK(nonce: string) {
 
 async function startBroadcast(data: any) {
     if (data.url) {
+        console.log("preparing to start broadcast", data)
         await camera.setLiveStreamMode({
             url: data.url,
             ...data.options
         });
+        console.log("awaiting acknoledgement");
         await camera.waitForProtoResponse("F1", "F9") // Wait for acknowledgement
-        await sleep(2000);
+        console.log("Camera is now ready to stream");
+        await sleep(5000);
+        console.log("starting capture");
         await camera.startCapture();
+        console.log("stared capture");
     }
 }
 
@@ -257,7 +273,7 @@ async function connectToWiFi(nonce: string, data) {
     let scanId	= null;
     let totalEntries = 0
     const response = await camera.waitForProtoResponse("02", "0B")
-    if (response.scanningState == 5) {
+    if (response.scanningState == 5 || response.scanningState == "SCANNING_SUCCESS") {
         scanId = response.scanId
         totalEntries = response.totalEntries
     } else {
@@ -283,7 +299,7 @@ async function connectToWiFi(nonce: string, data) {
         }
     
             const response = await camera.waitForProtoResponse("02", "0C")
-            if (response.provisioningState != 5 && response.provisioningState != 6) {
+            if (response.provisioningState != 5 && response.provisioningState != 6 && response.provisioningState != "PROVISIONING_SUCCESS_NEW_AP" && response.provisioningState != "PROVISIONING_SUCCESS_OLD_AP") {
                 const provisioningStateMap = {
                     "0": "PROVISIONING_UNKNOWN",	
                     "1": "PROVISIONING_NEVER_STARTED",	

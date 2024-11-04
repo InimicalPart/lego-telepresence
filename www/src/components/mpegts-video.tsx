@@ -20,13 +20,17 @@ export default function MpegTSVideo({
     style?: any,
     className?: string,
     muted?: boolean,
-    width?: number,
-    height?: number
+    width?: number | string,
+    height?: number | string
 }) {
 
     const [ready, setReady] = useState(false)
+    const [reload, setReload] = useState<number>(0)
 
     useEffect(() => {
+
+        if (url == "") return;
+
         const Mpegts = require("mpegts.js")
         //@ts-ignore
         let mpegtsPlayer: Mpegts.Player | null = null;
@@ -59,18 +63,27 @@ export default function MpegTSVideo({
             mpegtsPlayer.load()
             mpegtsPlayer.play()
 
-    
-
-
-
-
         }
+
+        window.addEventListener("LTP-RESTART-STREAM", () => {
+            console.log("Restarting stream")
+            if (mpegtsPlayer != null) {
+                mpegtsPlayer.destroy()
+                mpegtsPlayer = null
+            }
+            setReady(false)
+
+            setReload(reload + 1)
+        })
 
         return () => {
-            if (mpegtsPlayer!=null)
+            if (mpegtsPlayer != null)
                 mpegtsPlayer.destroy()
         }
-    }, [])
+
+
+
+    }, [url, reload])
 
     return (
         <>

@@ -1,15 +1,31 @@
 import NodeMediaServer from 'node-media-server';
 import { LTPGlobal } from './interfaces/global';
+import EventEmitter from 'events';
 
 declare const global: LTPGlobal;
 
 global.connections = [];
 global.nms = null;
-
+global.events = new EventEmitter();
 
 
 export async function register() {
     if (process.env.NEXT_RUNTIME === 'edge') return;
+    global.events.on('streamConnect', async (data) => {
+        console.log(`Stream connected: ${data.app}/${data.name}`);
+    })
+
+    global.events.on('streamDisconnect', async (data) => {
+        console.log(`Stream disconnected: ${data.app}/${data.name}`);
+    })
+
+    global.events.on('clientConnect', async (data) => {
+        console.log(`Client connected: ${data.app}/${data.name}`);
+    })
+
+    global.events.on('clientDisconnect', async (data) => {
+        console.log(`Client disconnected: ${data.app}/${data.name}`);
+    })
     await setupRTMP();
 }
 
@@ -32,6 +48,67 @@ async function setupRTMP() {
             logType: 0
         })
         nms.run();
+
+        nms.on('postPublish', async (id, StreamPath, args) => {
+            const streamPath = StreamPath.split("/").filter((x: string) => x != "");
+
+            const app = streamPath[0];
+            const streamName = streamPath[1];
+
+            global.events.emit('streamConnect', {
+                id: id,
+                name: streamName,
+                app: app,
+            });
+
+        });
+          
+
+        nms.on('donePublish', async (id, StreamPath, args) => {
+            const streamPath = StreamPath.split("/").filter((x: string) => x != "");
+
+            const app = streamPath[0];
+            const streamName = streamPath[1];
+
+            global.events.emit('streamDisconnect', {
+                id: id,
+                name: streamName,
+                app: app,
+            });
+
+        });
+
+
+        nms.on('postConnect', async (id, args: any) => {
+            if (!Object.keys(args).includes("app")) {                
+                const streamPath = args.streamPath.split("/").filter((x: string) => x != "");
+
+                const app = streamPath[0];
+                const streamName = streamPath[1];
+
+                global.events.emit('clientConnect', {
+                    id: id,
+                    name: streamName,
+                    app: app,
+                });
+            }
+        });
+        
+        nms.on('doneConnect', async (id, args: any) => {
+            if (!Object.keys(args).includes("app")) {                
+                const streamPath = args.streamPath.split("/").filter((x: string) => x != "");
+
+                const app = streamPath[0];
+                const streamName = streamPath[1];
+
+                global.events.emit('clientDisconnect', {
+                    id: id,
+                    name: streamName,
+                    app: app,
+                });
+
+            }
+        });
         global.nms = nms;
     }
 }

@@ -42,7 +42,10 @@ export async function SOCKET(
                 global.connections.push({
                     id: await generateWSID(),
                     type: "cam",
-                    cam: data,
+                    cam: {
+                        ...data,
+                        isLive: false,
+                    },
                     connection: client,
                     ready: false
                 });

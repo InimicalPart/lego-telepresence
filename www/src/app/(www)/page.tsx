@@ -1,3 +1,4 @@
+"use server"
 import { Battery, Camera, Car, Computer, X } from "@/components/icons"
 import { LTPGlobal } from "@/interfaces/global"
 import { Button, Card, card, CardBody, CardFooter, CardHeader, Divider, Spacer, Tooltip } from "@nextui-org/react"
@@ -16,7 +17,7 @@ export default async function Home() {
 
 
     return (
-    <>
+    <div className="flex h-full justify-center items-center self-center">
     {
     ...(await Promise.all(cars.map(async (car, i) => {
         const camera = global.connections.filter(conn=>!!conn.cam).find(conn=>conn.cam?.serialNumber === car?.car?.cameraSerial)
@@ -28,7 +29,6 @@ export default async function Home() {
         const hostname = carHost?.hostname == camHost?.hostname ? carHost?.hostname : "Unknown - Mismatch"
         const osName = carHost?.os == camHost?.os ? carHost?.os : "Unknown - Mismatch"
 
-        const isStreaming = !!camera ? camera.cam?.isLive : false
 
         return (
             <Card key={i}>
@@ -41,7 +41,7 @@ export default async function Home() {
                 </CardHeader>
                 <Divider orientation="horizontal"/>
                 <CardBody>
-                    <Player cameraId={camera?.id as string} className={"rounded-xl"}/>
+                    <Player cameraId={camera?.id as string} className={"rounded-xl"} foreverMute/>
                     <Spacer y={1.5}/>
                     <Button variant="flat" color="primary" as={Link} href={"/"+car.id+"/control"}>
                         Control
@@ -186,6 +186,6 @@ export default async function Home() {
 }
 
         
-        </>
+        </div>
     )
 }
