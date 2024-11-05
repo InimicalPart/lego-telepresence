@@ -3,9 +3,33 @@
 @tailwind utilities;
 
 
-body>div[data-overlay-container="true"] {
+body>div[data-overlay-container="true"]:first-of-type {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
+}
+
+.fade {
+    animation: fade 1s ease-in-out infinite alternate;
+    opacity: 0;
+}
+
+@keyframes fade {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+}
+
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
 }

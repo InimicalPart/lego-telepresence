@@ -7,18 +7,23 @@ export default function RestartStream({camId}:{camId: string}) {
     const [restarting, setRestarting] = useState(false);
 
     return (
-        <Button size="md" variant="flat" color="danger" disabled={restarting} onClick={()=>{
+        <Button size="md" variant={restarting ? "faded" : "flat"} color="danger" disabled={restarting || !camId} onClick={()=>{
             setRestarting(true);
-            console.log("Asking server to restart stream");
+            window.dispatchEvent(new CustomEvent("LTP-PLAYER-RESTART-PENDING"));
             const ws = new WebSocket(`/api/v1/user/ws`);
             ws.onopen = async () => {
                 ws.send(JSON.stringify({type: "restartStream", id: camId}));
-                await sleep(5000)
+            }
+
+            ws.onmessage = async (message) => {
                 setRestarting(false);
                 ws.close()
-                window.dispatchEvent(new CustomEvent("LTP-RESTART-STREAM"))
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent("LTP-RESTART-STREAM"))
+                },1000);
             }
-        }}>Restart Stream</Button>
+
+        }}>{ restarting ? "Restarting..." : "Restart Stream"}</Button>
     );
 }
 

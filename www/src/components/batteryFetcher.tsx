@@ -23,19 +23,16 @@ export default function BatteryFetcher({
         ws = new WebSocket(`${location.origin.replace("http", "ws")}/api/v1/user/ws`);
         ws.onopen = () => { 
             if (ws) {
-                
                 if (ws) ws.send(JSON.stringify({type: "query", id, query: "status"}));
                 
                 checkTimer = setInterval(()=>{
-                    console.log("Checking battery")
-                    
                     if (ws) ws.send(JSON.stringify({type: "query", id, query: "status"}));
                 },30000)
             
             } 
         }
         ws.onmessage = (message) => {
-            if (!ws) return console.log("No ws");
+            if (!ws) return;
             let data;
             try {
                 data = JSON.parse(message.data);
@@ -43,7 +40,6 @@ export default function BatteryFetcher({
                 console.warn(`Error parsing message: ${error}`);
                 return;
             }
-            console.log(data)
             if (data.type === "battery") {
                 setBattery(data.level);
             } else if (data.type === "status") {
@@ -51,6 +47,8 @@ export default function BatteryFetcher({
                     setSleeping(true);
                     setBattery(-1);
                     return
+                } else {
+                    setSleeping(false);
                 }
 
                 if (data.connected) {
@@ -66,7 +64,6 @@ export default function BatteryFetcher({
             }
         }
         ws.onclose = () => {
-            console.log("Connection closed");
             if (checkTimer) clearInterval(checkTimer);
         }
 
@@ -76,7 +73,7 @@ export default function BatteryFetcher({
         }
     },[id])
 
-    return <Tooltip delay={delay} placement="bottom" showArrow={true} content={<p>
+    return <Tooltip delay={delay} placement="bottom" showArrow={true} content={<p className="">
         {
             sleeping ? "Sleeping" :
             connected === false ? "Disconnected" :

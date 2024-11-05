@@ -5,7 +5,7 @@ import { Button, Card, card, CardBody, CardFooter, CardHeader, Divider, Spacer, 
 
 import { useState } from "react"
 
-import "@/styles/pulse-dot.css"
+import "@/styles/online-dot.css"
 import BatteryFetcher from "@/components/batteryFetcher"
 import MpegTSVideo from "@/components/mpegts-video"
 import Player from "@/components/player"
@@ -18,6 +18,8 @@ export default async function Home() {
 
     return (
     <div className="flex h-full justify-center items-center self-center">
+    {!cars.length && <p className="font-bold text-lg">No cars connected.</p>}
+
     {
     ...(await Promise.all(cars.map(async (car, i) => {
         const camera = global.connections.filter(conn=>!!conn.cam).find(conn=>conn.cam?.serialNumber === car?.car?.cameraSerial)
@@ -33,7 +35,7 @@ export default async function Home() {
         return (
             <Card key={i}>
                 <CardHeader className="flex flex-row justify-center items-center">
-                    <div className="dot"/>
+                    <div className="online-dot"/>
                     <Spacer x={3}/>
                     <Car size={16}/>
                     <Spacer x={1.5}/>
@@ -41,7 +43,7 @@ export default async function Home() {
                 </CardHeader>
                 <Divider orientation="horizontal"/>
                 <CardBody>
-                    <Player cameraId={camera?.id as string} className={"rounded-xl"} foreverMute/>
+                    <Player cameraId={camera?.id as string} className={"rounded-xl"} muted/>
                     <Spacer y={1.5}/>
                     <Button variant="flat" color="primary" as={Link} href={"/"+car.id+"/control"}>
                         Control

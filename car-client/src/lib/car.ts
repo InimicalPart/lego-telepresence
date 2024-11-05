@@ -26,6 +26,10 @@ export default class TechnicClient {
 
     private deviceFound: boolean = false;
 
+    private turnMotor: TechnicMediumAngularMotor;
+    private frontMotor: TechnicMediumAngularMotor;
+    private backMotor: TechnicMediumAngularMotor;
+
     async connect(timeout=30000) {
         return new Promise((resolve, reject) => {
 
@@ -62,6 +66,11 @@ export default class TechnicClient {
                     this.hub = data.hub
                     this.peripheral = data.peripheral
                     this.events.emit("ready")
+
+                    this.turnMotor = this.hub.getDeviceAtPort("D") as TechnicMediumAngularMotor
+                    this.frontMotor = this.hub.getDeviceAtPort("A") as TechnicMediumAngularMotor
+                    this.backMotor = this.hub.getDeviceAtPort("B") as TechnicMediumAngularMotor
+
                     resolve(null)
                 }
             })
@@ -126,6 +135,14 @@ export default class TechnicClient {
         back2.setPower(0)
 
 
+    }
+
+    async setWheelAngle(angle: number) {
+        // Motor D - Wheel Turn
+        // Motor A - Front Drive
+        // Motor B - Back Drive
+
+        return await this.turnMotor.gotoAngle(angle, 100)
     }
 
     //! -- COMMANDS -- !\\

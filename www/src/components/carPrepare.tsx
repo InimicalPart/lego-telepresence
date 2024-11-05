@@ -65,7 +65,7 @@ export default function CarPrepare({
                             setMessage("Waking camera...");
                             await sendAndAwait(ws, {type: "wake", id: camID});
                             setMessage("Making camera stay online...");
-                            ws.send(JSON.stringify({type: "keepAlive", enabled: true, id: camID}));
+                            // ws.send(JSON.stringify({type: "keepAlive", enabled: true, id: camID}));
                             setCamConnected(true);
                         } else if (data.connected) {
                             setCamConnected(true);

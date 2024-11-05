@@ -1,0 +1,39 @@
+html,
+body {
+  height: 100%;
+}
+
+.live-dot {
+  position: relative;
+  height: 12px;
+  width: 12px;
+  background: #ff3434;
+  border-radius: 50%;
+}
+.live-dot:after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  background: #ff3434;
+  animation: pulse 3s infinite;
+  transform-origin: center center;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4.5);
+    opacity: 0;
+  }
+}
