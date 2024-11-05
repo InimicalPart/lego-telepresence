@@ -232,7 +232,6 @@ export default class GoProClient {
 
 
         this.isSetup = true
-        this.keepAliveTimer = setInterval(() => this.keepAliveCmd(), 3000)
         await this.startListening();
 
         this.logger("Setup complete")
@@ -259,14 +258,14 @@ export default class GoProClient {
         await this.characteristics.response.QUERY_RESP.startNotifications()
         await this.characteristics.response.NETWORK_MANAGEMENT_RESP.startNotifications()
 
-        this.characteristics.response.COMMAND_RESP.on('valuechanged', (b)=>this.parseReponse(b))
-        this.characteristics.response.SETTINGS_RESP.on('valuechanged', (b)=>this.parseReponse(b))
-        this.characteristics.response.QUERY_RESP.on('valuechanged', (b)=>this.parseReponse(b))
-        this.characteristics.response.NETWORK_MANAGEMENT_RESP.on('valuechanged', (b)=>this.parseReponse(b))
+        this.characteristics.response.COMMAND_RESP.on('valuechanged', (b)=>this.parseReponse("COMMAND", b))
+        this.characteristics.response.SETTINGS_RESP.on('valuechanged', (b)=>this.parseReponse("SETTINGS", b))
+        this.characteristics.response.QUERY_RESP.on('valuechanged', (b)=>this.parseReponse("QUERY", b))
+        this.characteristics.response.NETWORK_MANAGEMENT_RESP.on('valuechanged', (b)=>this.parseReponse("NETWORK_MANAGEMENT", b))
         this.logger("Listening for responses")
     }
 
-    private async parseReponse(buffer: Buffer) {
+    private async parseReponse(origin: "COMMAND" | "QUERY" | "NETWORK_MANAGEMENT" | "SETTINGS", buffer: Buffer) {
         const firstByte = buffer.toString("hex").substring(0, 2)
         const bin = this.hex2bin(firstByte)
         //! Check if incoming message is a continuation packet from a previous message (first bit is 1)
@@ -288,7 +287,7 @@ export default class GoProClient {
                     if (a.completeString.length/2 == a.reportedLength) {
                         this.logger("Complete message found")
                         delete this.cutOffMap[cutOffMapKey]
-                        this.parseReponse(Buffer.concat([Buffer.from("00","hex"), Buffer.from(a.completeString, 'hex')]))
+                        this.parseReponse(origin, Buffer.concat([Buffer.from("00","hex"), Buffer.from(a.completeString, 'hex')]))
                     }
                     return false
                 }
@@ -299,10 +298,11 @@ export default class GoProClient {
     
         //! Check if incoming message is a cut off message (length doesn't match reported length)
         for (const key in protomap) {
+            //! Don't check for cut off messages if the incoming message is the result of a cut off message
             if (buffer.toString("hex").substring(0, 2) == "00") {
                 break
             }
-            let allowedPositions = [2,4,6]
+            let allowedPositions = [2, 4, 6]
             if (buffer.toString("hex").toLowerCase().includes(key.toLowerCase())) {
                 if (allowedPositions.includes(buffer.toString("hex").indexOf(key.toLowerCase()))) {
                     const firstByte = buffer.toString("hex").substring(0, 2)
@@ -377,27 +377,59 @@ export default class GoProClient {
                 }
             }
         } else {
-            let commandExecutionStatus = null;
-            switch (COMMAND_STATUS) {
-                case "00":
-                    commandExecutionStatus = "SUCCESS"
-                    break
-                case "01":
-                    commandExecutionStatus = "ERROR"
-                    break
-                case "02":
-                    commandExecutionStatus = "INVALID"
-                    break
-                default:
-                    commandExecutionStatus = "UNKNOWN"
-                    break
-            }
-            
-            this.logger(`[TLV] [${COMMAND_ID} - ${commandExecutionStatus}]${PAYLOAD || bufferString ? ":" : ""}`, PAYLOAD || bufferString)
-            const tlvWaitFor = this.tlvWaitForList.find((a) => a.commandId == COMMAND_ID)
-            if (tlvWaitFor) {
-                tlvWaitFor.resolve(PAYLOAD)
-                this.tlvWaitForList.splice(this.tlvWaitForList.indexOf(tlvWaitFor), 1)
+            if (origin == "QUERY") {
+                console.log(buffer.toString("hex"))
+
+                const QUERY_ID = bufferString.substring(0, 2)
+
+                let queryStatus = null;
+                switch (COMMAND_STATUS) {
+                    case "00":
+                        queryStatus = "SUCCESS"
+                        break
+                    case "01":
+                        queryStatus = "ERROR"
+                        break
+                    case "02":
+                        queryStatus = "INVALID"
+                        break
+                    default:
+                        queryStatus = "UNKNOWN"
+                        break
+                }
+
+                this.logger(`[TLV-Q] [${QUERY_ID} - ${queryStatus}]${PAYLOAD || bufferString ? ":" : ""}`, PAYLOAD || bufferString)
+                const tlvWaitFor = this.tlvWaitForList.find((a) => a.commandId == QUERY_ID)
+                if (tlvWaitFor) {
+                    tlvWaitFor.resolve(PAYLOAD)
+                    this.tlvWaitForList.splice(this.tlvWaitForList.indexOf(tlvWaitFor), 1)
+                }
+
+            } else {
+
+
+                let commandExecutionStatus = null;
+                switch (COMMAND_STATUS) {
+                    case "00":
+                        commandExecutionStatus = "SUCCESS"
+                        break
+                    case "01":
+                        commandExecutionStatus = "ERROR"
+                        break
+                    case "02":
+                        commandExecutionStatus = "INVALID"
+                        break
+                    default:
+                        commandExecutionStatus = "UNKNOWN"
+                        break
+                }
+                
+                this.logger(`[TLV] [${COMMAND_ID} - ${commandExecutionStatus}]${PAYLOAD || bufferString ? ":" : ""}`, buffer.toString("hex"))
+                const tlvWaitFor = this.tlvWaitForList.find((a) => a.commandId == COMMAND_ID)
+                if (tlvWaitFor) {
+                    tlvWaitFor.resolve(PAYLOAD)
+                    this.tlvWaitForList.splice(this.tlvWaitForList.indexOf(tlvWaitFor), 1)
+                }
             }
         }
     }
@@ -445,10 +477,8 @@ export default class GoProClient {
         this.logger("Cleaned up")
     }
 
-    private async keepAliveCmd() {
-        if (this.keepAlive && await this.device.isConnected() == true as any) {
-            await this.characteristics.request.SETTINGS.writeValue(this.getTLVByteArray("5B","42"))
-        }
+    async sendKeepAlive(): Promise<void> {
+        await this.characteristics.request.SETTINGS.writeValue(this.getTLVByteArray("5B","42"))
     }
 
 
@@ -543,9 +573,25 @@ export default class GoProClient {
     }
 
     async getStatusValues(): Promise<any> {
-        await this.characteristics.request.QUERY.writeValue(this.getTLVByteArray("13", "1D06081f"))
+        await this.characteristics.request.QUERY.writeValue(this.getTLVByteArray("13", "1D", "query"))
     }
 
+    /**
+     * @description Tell the camera who is in control
+     * @param [external=true] - Whether to claim external control
+     * @returns {Promise<void>}
+     */
+    async claimControl(external: boolean = true) {
+        const NetworkManagementProto = protobuf.loadSync('protos/set_camera_control_status.proto')
+        const RequestSetCameraControlStatus = NetworkManagementProto.lookupType('open_gopro.RequestSetCameraControlStatus')
+        const RequestSetCameraControlStatusData = RequestSetCameraControlStatus.encode(RequestSetCameraControlStatus.create({
+            cameraControlStatus: external ? "CAMERA_EXTERNAL_CONTROL" : "CAMERA_IDLE"
+        })).finish()
+    
+        for (const packet of this.getProtoByteArray("F1", "69", Buffer.from(RequestSetCameraControlStatusData).toString('hex'))) {
+            await this.characteristics.request.COMMAND.writeValue(packet)
+        }
+    }
 
     /**
      * @description Get the results of the network scan
@@ -692,13 +738,17 @@ export default class GoProClient {
 
 
     //! Helper functions
-    private getTLVByteArray(commandId: string, payload?: string) {
+    private getTLVByteArray(commandId: string, payload?: string, type: "query" | "command" | "settings" | "network_management" = "command") {
         const commandIdBuffer = Buffer.from(commandId, 'hex')
         if (!!payload) {
             const payloadBuffer = Buffer.from(payload, 'hex')
-            const lengthDenotation = Buffer.from([payloadBuffer.length + 2])
+            const lengthDenotation = Buffer.from([payloadBuffer.length + (type == "query" ? 1 : 2)])
             const payloadLengthDenotation = Buffer.from([payloadBuffer.length])
-            return Buffer.concat([lengthDenotation, commandIdBuffer, payloadLengthDenotation, payloadBuffer])
+            if (type == "query") {
+                return Buffer.concat([lengthDenotation, commandIdBuffer, payloadBuffer])
+            } else {
+                return Buffer.concat([lengthDenotation, commandIdBuffer, payloadLengthDenotation, payloadBuffer])
+            }
         } else {
             const lengthDenotation = Buffer.from([1])
             return Buffer.concat([lengthDenotation, commandIdBuffer])

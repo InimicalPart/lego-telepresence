@@ -25,7 +25,12 @@ if (global.config.DEVELOPMENT) {
 }
 
 const camera = new GoProClient(global.config.CAMERA_MAC, true);
-
+let keepAliveEnabled = false;
+let keepAliveInterval: NodeJS.Timeout = setInterval(()=>{
+    if (keepAliveEnabled && isConnected) {
+        parseMessage(JSON.stringify({type: "sendKeepAlive"}))
+    }
+}, 3000);
 let socket: WebSocket;
 
 camera.events.on("ready", () => {
@@ -101,6 +106,14 @@ async function parseMessage(message: string) {
 
 async function processQueue() {
     if (!isBusy) {
+
+        if (msgQueue.filter(m => m.type == "sendKeepAlive").length > 1) {
+            const indexOfFirstKeepAlive = msgQueue.findIndex(m => m.type == "sendKeepAlive")
+            
+            msgQueue = msgQueue.filter(m => m.type !== "sendKeepAlive")
+            msgQueue.splice(indexOfFirstKeepAlive, 0, {type: "sendKeepAlive"})
+        }
+
         const next = msgQueue.shift();
         if (next) {
             console.log("Processing next message in queue ("+msgQueue.length+" remain):", next);
@@ -161,9 +174,35 @@ async function processMessage(data: any) {
             break;
         case "getStatusValues":
             await camera.getStatusValues();
-            const resp = await camera.waitForTlvResponse("17")
+            let resp = Buffer.from(await camera.waitForTlvResponse("13"), "hex");
 
-            socket.send(JSON.stringify({type: "statusValues", data: resp, nonce: data.nonce}));
+            const finalDict = {}
+
+            while (resp.length > 0) {
+                //STATUS_ID (2 bytes)
+                //LENGTH (2 bytes)
+                //VALUE (LENGTH bytes)
+
+                const STATUS_ID = resp.subarray(0, 1)
+                const LENGTH = resp.subarray(1, 2)
+                const VALUE = resp.subarray(2, 2 + parseInt(LENGTH.toString("hex"), 16));
+            
+                switch (STATUS_ID.toString("hex").toUpperCase()) {
+                    case "1D":
+                        //* Connected AP Name
+                        finalDict["connectedAP"] = VALUE.toString("utf-8");
+                        break;
+                    default:
+                        console.warn("Unknown status ID:", STATUS_ID.toString("hex").toUpperCase());
+                        break;
+                    
+                }
+
+                const removeLength = 2 + parseInt(LENGTH.toString("hex"), 16);
+                resp = resp.subarray(removeLength);
+            }
+
+            socket.send(JSON.stringify({type: "statusValues", data: finalDict, nonce: data.nonce}));
             break;
         case "wake":
             while (!isConnected) {
@@ -173,11 +212,18 @@ async function processMessage(data: any) {
             await sendOK(data.nonce);
             break;
         case "keepAlive":
-            await camera.toggleKeepAlive(data.enabled ?? true)
+            keepAliveEnabled = data.enabled ?? true
             await sendOK(data.nonce);
             break;
         case "system":
             socket.send(JSON.stringify({type: "system", model: await getModel(), hostname: await getHostname(), os: await getSystemOSName(), nonce: data.nonce}));
+            break;
+        case "claimControl":
+            await camera.claimControl(data.external);
+            await sendOK(data.nonce);
+            break;
+        case "sendKeepAlive":
+            await camera.sendKeepAlive();
             break;
         default:
             break;

@@ -3,14 +3,14 @@ body {
   height: 100%;
 }
 
-.dot {
+.online-dot {
   position: relative;
   height: 12px;
   width: 12px;
   background: #34ff4a;
   border-radius: 50%;
 }
-.dot:after {
+.online-dot:after {
   content: "";
   position: absolute;
   top: 3px;

@@ -65,7 +65,7 @@ export default function MpegTSVideo({
 
         }
 
-        window.addEventListener("LTP-RESTART-STREAM", () => {
+        function onStreamRestartRequest() {
             console.log("Restarting stream")
             if (mpegtsPlayer != null) {
                 mpegtsPlayer.destroy()
@@ -74,11 +74,15 @@ export default function MpegTSVideo({
             setReady(false)
 
             setReload(reload + 1)
-        })
+        }
+
+        window.addEventListener("LTP-RESTART-STREAM", onStreamRestartRequest)
 
         return () => {
             if (mpegtsPlayer != null)
-                mpegtsPlayer.destroy()
+                mpegtsPlayer.destroy();
+
+            window.removeEventListener("LTP-RESTART-STREAM", onStreamRestartRequest)
         }
 
 

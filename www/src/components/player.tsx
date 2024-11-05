@@ -9,21 +9,23 @@ export default function Player({
     cameraId,
     className,
     style,
-    foreverMute = false
+    muteNotice = false,
+    muted = true
 }: {
     width?: string,
     height?: string,
     cameraId: string|null,
     className?: any,
     style?: any,
-    foreverMute?: boolean
+    muteNotice?: boolean,
+    muted?: boolean,
 }) {
 
 
     const [isStreaming, setStreaming] = useState(false)
     const [url, setUrl] = useState("");
-    const [muted, setMuted] = useState(true);
     const [checkTimer, setCheckTimer] = useState<NodeJS.Timeout | null>(null);
+    const [restartPending, setRestartPending] = useState(false);
     useEffect(()=>{
         if (!cameraId) return;
         const ws = new WebSocket(`${location.origin.replace("http", "ws")}/api/v1/user/ws`);
@@ -54,13 +56,23 @@ export default function Player({
             }
         }
 
-        window.onclick = () => {
-            if (!foreverMute) setMuted(false);
+        function onRestartPending(){
+            setRestartPending(true);
         }
+        function onRestart(){
+            setRestartPending(false);
+        }
+
+        window.addEventListener("LTP-PLAYER-RESTART-PENDING", onRestartPending)
+        window.addEventListener("LTP-RESTART-STREAM", onRestart)
+
 
         return () => {
             if (ws.readyState === ws.OPEN) ws.close();
             if (checkTimer) clearInterval(checkTimer);
+
+            window.removeEventListener("LTP-PLAYER-RESTART-PENDING", onRestartPending)
+            window.removeEventListener("LTP-RESTART-STREAM", onRestart)
         }
     },[cameraId])
 
@@ -73,18 +85,22 @@ export default function Player({
  
  
     return <div className={`relative ${className}`} style={{width: width, height: height, ...style}}>
-        {isStreaming ?
-        <>
-            <MpegTSVideo url={url} type="mse" className={`relative ${className}`} style={style} muted={muted} height={height} width={width}>
-                <div className={`w-full h-full bg-black z-20 absolute flex justify-center items-center text-sm ${className}`} style={style}>
-                    <p className="text-white">Loading...</p>
-                </div>
-            </MpegTSVideo>
-            <p className="w-full text-center mt-2 text-neutral-500" hidden={!muted || foreverMute}>Click anywhere on the page to unmute</p>
-        </>
-        : <div className={`w-full h-full bg-black z-20 absolute flex justify-center items-center text-sm ${className}`} style={style}>
-            <p className="text-white">Camera stream not available.</p>
-        </div>
+        {restartPending ? <>
+            <div className={`w-full h-full bg-black z-20 absolute flex justify-center items-center text-sm ${className}`}>
+                <p id="restarting-text" className={`fade text-white text-md font-bold`}>Restarting camera stream...</p>
+            </div>
+        </> : isStreaming ?
+            <>
+                <MpegTSVideo url={url} type="mse" className={`relative ${className}`} style={style} muted={muted} height={height} width={width}>
+                    <div className={`w-full h-full bg-black z-20 absolute flex justify-center items-center text-sm ${className}`} style={style}>
+                        <p className="text-white text-md font-bold">Loading...</p>
+                    </div>
+                </MpegTSVideo>
+                <p className="w-full text-center mt-2 text-neutral-500" hidden={!muted || !muteNotice}>Click anywhere on the page to unmute</p>
+            </>
+            : <div className={`w-full h-full bg-black z-20 absolute flex justify-center items-center text-sm ${className}`} style={style}>
+                <p className="text-white text-md font-bold">Camera stream not available.</p>
+            </div>
         }
     </div>
 }
