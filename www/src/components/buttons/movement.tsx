@@ -2,13 +2,14 @@
 
 import { Button, Kbd, Slider } from "@nextui-org/react";
 import { useEffect, useMemo, useState } from "react";
-import { Joystick } from 'react-joystick-component';
+import { Joystick, JoystickShape } from 'react-joystick-component';
 
 export default function MovementControls({carId}:{carId: string}) {
 
     const [keyboardControl, setKeyboardControl] = useState<boolean>(false);
     const [freeControl, setFreeControl] = useState<boolean>(false);
     const [sliderValue, setSliderValue] = useState<number>(0);
+    const [sliderValue2, setSliderValue2] = useState<number>(0);
     const [lastSetSliderValue, setLastSetSliderValue] = useState<number>(0);
     const ws = useMemo<WebSocket>(()=>new WebSocket(`/api/v1/user/ws`), []);
 
@@ -55,7 +56,7 @@ export default function MovementControls({carId}:{carId: string}) {
 
     return (
         freeControl ? <div className="p-10 flex flex-row justify-center items-center gap-52">
-            <div>
+            <div className="flex flex-row justify-center items-center gap-5">
 
             <Slider value={sliderValue} size="md" className="w-80" aria-label="ok" minValue={-100} defaultValue={0}
             //@ts-expect-error
@@ -68,8 +69,20 @@ export default function MovementControls({carId}:{carId: string}) {
                 ws.send(JSON.stringify({type: "setWheelAngle", id: carId, angle: 0}));
                 setSliderValue(0);
             }}/>
+
+        <Slider value={sliderValue2} size="md" className="h-80" aria-label="ok" orientation="vertical" minValue={-100} defaultValue={0}
+            //@ts-expect-error
+            fillOffset={0}
+            maxValue={100} step={10} onChange={(value: any) => {
+                if (value === sliderValue2) return;
+                ws.send(JSON.stringify({type: "setSpeed", id: carId, amount: value}));
+                setSliderValue2(value);
+            }} onChangeEnd={()=>{
+                ws.send(JSON.stringify({type: "setSpeed", id: carId, amount: 0}));
+                setSliderValue2(0);
+            }}/>
             </div>
-            <Joystick size={100} throttle={0} baseColor="black" stickColor="red" move={console.log} stop={console.log} />
+            <Joystick size={100} throttle={0} baseShape={JoystickShape.Square} stickShape={JoystickShape.Square} baseColor="black" stickColor="red" move={(a)=>{console.log(a); ws.send(JSON.stringify({...a, id:carId}))}} stop={(a)=>{console.log(a);ws.send(JSON.stringify({...a, id:carId}))}} />
         </div> :
         <>
             <div className="flex flex-wrap max-w-min gap-2">

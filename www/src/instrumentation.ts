@@ -13,10 +13,26 @@ export async function register() {
     if (process.env.NEXT_RUNTIME === 'edge') return;
     global.events.on('streamConnect', async (data) => {
         console.log(`Stream connected: ${data.app}/${data.name}`);
+
+        //find camera that has *.cam.ssid == data.name, then set isLive to true
+        const cam = global.connections.find(cam => cam.cam?.ssid == data.name);
+
+        if (cam && cam.cam && !cam.cam?.isLive) {
+            console.log("Setting camera to live");
+            cam.cam.isLive = true;
+        }
     })
 
     global.events.on('streamDisconnect', async (data) => {
         console.log(`Stream disconnected: ${data.app}/${data.name}`);
+
+        //find camera that has *.cam.ssid == data.name, then set isLive to false
+        const cam = global.connections.find(cam => cam.cam?.ssid == data.name);
+
+        if (cam && cam.cam?.isLive) {
+            console.log("Setting camera to not live");
+            cam.cam.isLive = false;
+        }
     })
 
     global.events.on('clientConnect', async (data) => {

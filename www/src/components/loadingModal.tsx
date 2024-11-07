@@ -49,7 +49,7 @@ export default function LoadingModal({
             <>
               <ModalHeader className="flex flex-col gap-1 text-center">{title}</ModalHeader>
                 <ModalBody className="flex items-center justify-center">
-                    <LoadingSpinner size="lg" hidden={spinner}/>
+                    <LoadingSpinner size="lg" hidden={!spinner}/>
                 </ModalBody>
                 <ModalFooter className="text-center justify-center flex flex-col">
                     <p>{message}</p>

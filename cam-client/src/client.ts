@@ -225,6 +225,17 @@ async function processMessage(data: any) {
         case "sendKeepAlive":
             await camera.sendKeepAlive();
             break;
+        case "stabilization":
+            await camera.setStabilization(data.enabled ?? true);
+            await sendOK(data.nonce);
+            break;
+        case "test":
+            await camera.getLiveStreamStatus();
+            const resp2 = await camera.waitForProtoResponse("F5", "F4");
+
+            console.log("Test response:", resp2);
+            socket.send(JSON.stringify({type: "test", data: resp2, nonce: data.nonce}));
+            break;
         default:
             break;
     }

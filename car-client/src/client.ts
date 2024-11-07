@@ -6,6 +6,7 @@ import path from "path";
 import { WebSocket } from "ws";
 import CarClient from "./lib/car.js";
 import si from "systeminformation";
+import performance from "./lib/performance.js";
 
 declare const global: CarClientGlobal;
 
@@ -18,6 +19,11 @@ if (global.config.DEVELOPMENT) {
 } else {
     config({path: "./.env.production"});
 }
+
+let messageQueue: any[] = [];
+let queueBusy = false;
+
+setInterval(handleQueue, 50);
 
 const car = new CarClient(global.config.TECHNIC_MAC, true);
 
@@ -79,31 +85,41 @@ function registerHandlers() {
 async function parseMessage(message: string) {
     try {
         const data = JSON.parse(message);
-        processMessage(data);
+        messageQueue.push({...data, at: Date.now()});
+        console.log(data);
+
     } catch (error) {
         console.warn(`Error parsing message: ${error}`);
     }
 }
 
 
-let messageQueue: any[] = [];
-
-setInterval(handleQueue, 50);
 
 async function handleQueue() {
+    if (queueBusy) return;
 
-    // if there are more than 1 "setWheelAngle" messages in the queue, remove all but the last one
-    if (messageQueue.filter(m => m.type === "setWheelAngle").length > 1) {
-        const lastIndex = messageQueue.map((m, i) => m.type === "setWheelAngle" ? i : -1).filter(i => i !== -1).pop();
-        messageQueue = messageQueue.filter((m, i) => i === lastIndex);
+    queueBusy = true;
+    performance.start("handleQueue", undefined, {silent:true});
+    // if there is a type "stop" in the queue, remove all "move" messages
+
+    if (messageQueue.some((msg) => msg.type === "stop")) {
+        messageQueue = messageQueue.filter((msg) => msg.type !== "move");
     }
-    
-    if (!busy && messageQueue.length > 0) {
+
+    // if there are more than 1 "move" messages in the queue, remove all but the last one
+
+    if (messageQueue.filter((msg) => msg.type === "move").length > 1) {
+        messageQueue = messageQueue.filter((msg) => msg.type !== "move" || msg.at === messageQueue.filter((msg) => msg.type === "move").sort((a, b) => a.at - b.at)[0].at);
+    }
+    if (messageQueue.length > 0) {
+        performance.end("handleQueue");
         const message = messageQueue.shift();
-        busy = true;
+        performance.start("handleCMD", undefined, {silent:true});
         await processMessage(message);
-        busy = false;
+        performance.end("handleCMD");
     }
+    performance.exists("handleQueue") && performance.end("handleQueue", {silent:true});
+    queueBusy = false;
 
 }
 
@@ -132,13 +148,10 @@ async function processMessage(data: any) {
             await handleStop(data);
             break;
         case "setWheelAngle":
-            if (busy) {
-                messageQueue.push(data);
-                return;
-            }
-            busy = true
             await car.setWheelAngle(data.angle);
-            busy = false;
+            break;
+        case "setSpeed":
+            await car.move(data.amount);
             break;
         default:
             break;
@@ -146,32 +159,11 @@ async function processMessage(data: any) {
 }
 
 async function handleStop(data: any) {
-    // { "type": "stop", "x": null, "y": null, "direction": null, "distance": null}
+    await car.realMove("stop", data.data);
 }
 
 async function handleMove(data: any) {
-    // { "type": "move", "x": -0.9905574423024359, "y": -0.13709833514399913, "distance": 100}
-    // 
-    // x < 0 = LEFT, distance = angle to left, 100 meaning max, and 0 meaning none
-    // x > 0 = RIGHT, distance = angle to right, 100 meaning max, and 0 meaning none
-    // y > 0 = FORWARD, distance = speed, 100 meaning max, and 0 meaning none
-    // y < 0 = BACKWARD, distance = speed, 100 meaning max, and 0 meaning none
-
-    // this means that if for example x = 0.5, y = 0.5, distance = 100, the car will move forward and to the right (based on how much x is at between 0 and 1) at full speed
-
-    const x = data.x ?? 0;
-    const y = data.y ?? 0;
-    const distance = data.distance ?? 0;
-
-    // do not handle if both x and y are 0 or if distance is 0 as when they are zero, handleStop will be called instead
-    if (x === 0 && y === 0 || distance === 0) return;
-
-    // car.setWheelAngle(x*100);
-    // car.setSpeed(y*100);
-
-
-
-
+    await car.realMove("move", data.data);
 }
 
 async function sendStatus(nonce: string) {

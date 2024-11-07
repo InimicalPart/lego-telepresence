@@ -1,5 +1,6 @@
 import { LTPGlobal } from '@/interfaces/global';
 import { generateWSID, InimizedWS, inimizeWSClient } from '@/utils/ws';
+import { i } from 'framer-motion/client';
 import { send } from 'process';
 
 declare const global: LTPGlobal;
@@ -98,12 +99,8 @@ export async function SOCKET(
                 })
                 if (conn.cam) conn.cam.isLive = false;
                 await sleep(5000)
-            case "startStream":
-                if (!conn.cam) {
-                    console.log(`[WS] User requested startStream from non-camera connection: ${connId}`);
-                    return client.send(JSON.stringify({error: "Connection is not a camera"}));
-                }
-
+            
+            case "connectToWiFi":
                 const returnInfo = await conn.connection.sendAndAwait({type: "getStatusValues"}, 30000).catch((error) => {
                     console.log(`[WS] Error sending 'getStatusValues': ${error}`);
                     client.send(JSON.stringify({error: "Error sending 'getStatusValues'", connId, nonce}));
@@ -115,17 +112,29 @@ export async function SOCKET(
                         if (response.error) {
                             console.log(`[WS] Error sending 'connectToWiFi': ${response.error}`);
                             client.send(JSON.stringify({error: "Error sending 'connectToWiFi'", connId, nonce}));
+                        } else {
+                            if (data.type !== "restartStream") {
+                                client.send(JSON.stringify({...response, connId, nonce}));
+                            }
                         }
                     }).catch((error) => {
                         console.log(`[WS] Error sending 'connectToWiFi': ${error}`);
                         client.send(JSON.stringify({error: "Error sending 'connectToWiFi'", connId, nonce}));
                     })
+                } else if (data.type !== "restartStream") {
+                    client.send(JSON.stringify({error: "Already connected to WiFi", connId, nonce}));
+                }
+                if (data.type !== "restartStream") break;
+            case "startStream":
+                if (!conn.cam) {
+                    console.log(`[WS] User requested startStream from non-camera connection: ${connId}`);
+                    return client.send(JSON.stringify({error: "Connection is not a camera"}));
                 }
 
                 await conn.connection.sendAndAwait({type: "startBroadcast", url:`rtmp://192.168.1.228/remote-live/${conn?.cam?.ssid}`, options: { //TODO: MAKE THIS IP NOT HARDCODED
                     encode: false,
-                    windowSize: 12,
-                    lens: 4
+                    windowSize: "WINDOW_SIZE_480",
+                    lens: "LENS_SUPERVIEW"
                 }}, 45000).then((response) => {
                     if (conn.cam) conn.cam.isLive = true;
                     client.send(JSON.stringify({...response, connId, nonce}));
@@ -147,13 +156,63 @@ export async function SOCKET(
                     client.send(JSON.stringify({error: "Error sending 'claimControl'", connId, nonce}));
                 })
                 break;
+            case "stabilization":
+                if (!conn.cam) {
+                    console.log(`[WS] User requested stabilization from non-camera connection: ${connId}`);
+                    return client.send(JSON.stringify({error: "Connection is not a camera"}));
+                }
+
+                conn.connection.sendAndAwait({type: "stabilization", enabled: data.enabled ?? true}, 30000).then((response) => {
+                    client.send(JSON.stringify({...response, connId, nonce}));
+                }).catch((error) => {
+                    console.log(`[WS] Error sending 'stabilization': ${error}`);
+                    client.send(JSON.stringify({error: "Error sending 'stabilization'", connId, nonce}));
+                })
+                break;
+
             case "setWheelAngle":
                 if (!conn.car) {
                     console.log(`[WS] User requested setWheelAngle from non-car connection: ${connId}`);
                     return client.send(JSON.stringify({error: "Connection is not a car"}));
                 }
 
+                console.log(data);
                 conn.connection.send({type: "setWheelAngle", angle: data.angle})
+                break;
+            case "setSpeed":
+                if (!conn.car) {
+                    console.log(`[WS] User requested setWheelAngle from non-car connection: ${connId}`);
+                    return client.send(JSON.stringify({error: "Connection is not a car"}));
+                }
+
+                console.log(data);
+                conn.connection.send({type: "setSpeed", amount: data.amount})
+                break;
+            case "stop":
+            case "move":
+                if (!conn.car) {
+                    console.log(`[WS] User requested move/stop from non-car connection: ${connId}`);
+                    return client.send(JSON.stringify({error: "Connection is not a car"}));
+                }
+                const type = data.type;
+                delete data.type;
+                delete data.id;
+                conn.connection.send({type: type, data })
+                break;
+            case "test":
+                if (!conn.cam) {
+                    console.log(`[WS] User requested test from non-camera connection: ${connId}`);
+                    return client.send(JSON.stringify({error: "Connection is not a camera"}));
+                }
+
+                conn.connection.sendAndAwait({type: "test"}, 30000).then((response) => {
+                    client.send(JSON.stringify({...response, connId, nonce}));
+                }).catch((error) => {
+                    console.log(`[WS] Error sending 'test': ${error}`);
+                    client.send(JSON.stringify({error: "Error sending 'test'", connId, nonce}));
+                })
+
+
                 break;
             default:
                 console.log(`[WS] Unknown message type: ${data.type}`);
