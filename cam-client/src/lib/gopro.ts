@@ -53,6 +53,7 @@ export default class GoProClient {
     private debug: boolean = false
     private isSetup: boolean = false
     public isSleeping: boolean = false
+    public isConnected: boolean = false
     private device: Device;
     private keepAlive = false;
     public events: EventEmitter = new EventEmitter();
@@ -116,7 +117,7 @@ export default class GoProClient {
 
     async connect(retry: boolean = true) {
         if (this.device) {
-            this.device.disconnect()
+            if (this.isConnected) this.device.disconnect()
             this.device.removeAllListeners()
         }
         this.logger("Searching for GoPro with MAC", this.MAC)
@@ -146,6 +147,7 @@ export default class GoProClient {
         }
 
         this.isSleeping = false
+        this.isConnected = true
         this.logger("Connected to GoPro")
         this.events.emit("connect")
 
@@ -186,6 +188,7 @@ export default class GoProClient {
         this.events.emit("disconnect", {isSleeping: this.isSleeping})
         this.isSetup = false
         this.keepAlive = false
+        this.isConnected = false
 
         if (!this.isSleeping) {
             this.logger("GoPro disconnected, attempting to reconnect in 30 seconds...")
@@ -495,6 +498,17 @@ export default class GoProClient {
         return {ssid, password}
     }
 
+    async getLiveStreamStatus(): Promise<void> {
+        const LiveStreamingProto = protobuf.loadSync('protos/live_streaming.proto')
+        const RequestGetLiveStreamStatus = LiveStreamingProto.lookupType('open_gopro.RequestGetLiveStreamStatus')
+        const RequestGetLiveStreamStatusData = RequestGetLiveStreamStatus.encode(RequestGetLiveStreamStatus.create({
+            
+        })).finish()
+    
+        for (const packet of this.getProtoByteArray("F5", "74", Buffer.from(RequestGetLiveStreamStatusData).toString('hex'))) {
+            await this.characteristics.request.COMMAND.writeValue(packet)
+        }
+    }
 
     /**
      * @description Get information about the GoPro (name, model number, serial number, firmware revision, battery level)
@@ -582,8 +596,8 @@ export default class GoProClient {
      * @returns {Promise<void>}
      */
     async claimControl(external: boolean = true) {
-        const NetworkManagementProto = protobuf.loadSync('protos/set_camera_control_status.proto')
-        const RequestSetCameraControlStatus = NetworkManagementProto.lookupType('open_gopro.RequestSetCameraControlStatus')
+        const CameraControlProto = protobuf.loadSync('protos/set_camera_control_status.proto')
+        const RequestSetCameraControlStatus = CameraControlProto.lookupType('open_gopro.RequestSetCameraControlStatus')
         const RequestSetCameraControlStatusData = RequestSetCameraControlStatus.encode(RequestSetCameraControlStatus.create({
             cameraControlStatus: external ? "CAMERA_EXTERNAL_CONTROL" : "CAMERA_IDLE"
         })).finish()
@@ -730,6 +744,25 @@ export default class GoProClient {
         await this.characteristics.request.SETTINGS.writeValue(this.getTLVByteArray("03", parseInt(FPSIdMap[fps.toString()]).toString(16).padStart(2, '0')))
     }
 
+    /**
+     * @description Set stabilization
+     * @param enabled - Whether to enable stabilization
+     * @returns {Promise<void>}
+     */
+    async setStabilization(enabled: boolean): Promise<void> {
+        await this.setSetting(135, enabled ? "01" : "00") 
+    }
+
+
+    async setSetting(settingId: number | string, value: string) {
+        if (typeof settingId === 'number') {
+            settingId = settingId.toString(16).padStart(2, '0')
+        }
+
+        console.log(this.getTLVByteArray(settingId, value))
+
+        await this.characteristics.request.SETTINGS.writeValue(this.getTLVByteArray(settingId, value))
+    }
 
 
     //! -- COMMANDS -- !\\

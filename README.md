@@ -1,1 +1,72 @@
 # LTP - Lego Telepresence
+
+## To-Do / Ideas / I Want To-Dos
+- [ ] Try to fix the 3s delay between the GoPro and website
+  - [ ] Find alternatives for sending live feed from GoPro to server
+    - [Preview mode](https://community.gopro.com/s/article/GoPro-Quik-Live-Preview?language=en_US)?
+      - Requires PI to connect to GoPro's WiFi, PI has 1 network adapter
+        - Get a small another network adapter? 
+      - Can work via USB?
+    - Connect camera to RPI's micro USB port
+      - Requires USB-C to Micro USB adapter
+  - [Webcam mode](https://community.gopro.com/s/article/GoPro-Webcam?language=en_US)?
+    - Is Linux supported?
+  - Use phone instead?
+    - Inefficient
+    - Phone is big
+    - Not enough LEGO pieces for an adjustable phone mount
+    - How?
+- [ ] Setup LTP on external server
+  - [ ] Test streaming delay, worse?
+  - [ ] Custom service to auto-launch NextJS on start-up
+  - Domain? IP?
+  - Do we need SSL for RTMP streaming?
+- [ ] Real-time available cars updating on /
+- [ ] Real-time car availability updating on /[UUID]/control
+- [ ] Implement instructional movement
+- [ ] Record movements, with playback / saving
+- [ ] Make movement UI a bit more prettier and user-friendly
+- [ ] Add more control buttons
+  - [ ] Turn off camera stream? (permanent)
+- [ ] "Unprepare" car when the user leaves the control site
+- [ ] Do not allow multi-control (someone else controlling is another person is controlling)
+  - Allow viewing and sound
+- [ ] Car Client - Fix bugs
+  - [ ] Not very stable, may crash if wrongly configured, or get stuck in certain situations
+  - [ ] Reconnect function gets called multiple times, even if already connected to the car which glitches things out
+  - [ ] Automatically calibrate the wheels to be straight (possible?)
+  - [ ] A glitch appears if the website goes down, and the car client reconnects, requests are not handled properly
+  - [ ] If car disconnects, the software will not try to reconnect, which it should try to do forever
+- [ ] Cam Client - Fix bugs
+  - [ ] A glitch appears if the website goes down, and the camera client reconnects, requests are not handled properly
+- [ ] Raspberry PI
+  - [ ] Create services that launch the car and cam client everytime the PI starts, to allow for fast initialization
+  - [ ] How do we quickly configure new Wi-Fis?
+    - [ ] Configure phone hotspots before-hand which the RPI will connect to if it doesn't find any other networks?
+    - [ ] Set a static IP for RPI when connected to these networks
+      - [ ] Calculated on the fly when connected to the Wi-Fi network
+        - [ ] TypeScript backend
+        - [ ] When connected to a known hotspot network:
+          - [ ] Calculate the IP range (by using the subnet mask)
+          - [ ] Find hotspot's source's IP (usually the first IP like a router)
+          - [ ] Use the next IP address
+          - [ ] Set the static IP on the RPI via ``nmcli``:
+            - ``sudo nmcli c mod <connection-name> ipv4.addresses <address>/<sub-mask-bin> ipv4.method manual``
+    - [ ] Allow SSH access to configure Wi-Fis (or quick website running on the PI allow to configure networks?)
+      - SSH
+        - RSA keys, generated beforehand
+      - Website
+        - TypeScript backend
+        - Easy and Quick UI
+          - Use ``wpa-cli`` (terminal) with a script to set the network information (possible to use scripts? ``wpa-cli`` is interactive)
+    - [ ] Make camera connect to the same Wi-Fi as the RPI
+      - [ ] Do this by getting the SSID and passkey from the RPI, and sending it to the camera during "connectToWiFi"
+- [ ] Add a way to check how much battery the powerbank has?
+  - How?
+- [ ] Add alert on control website when detected that the car has low battery
+  - Changes a lot (e.g 40% to 20% or lower on next battery check call)
+- [ ] Add alert on control website when detected that the cam has low battery
+  - [ ] Add check and icon for when the camera is charging via the powerbank
+    - Internal Battery Bars (Status ID 2)
+      - Does this work when live streaming? (camera uses the power source from the charger instead of the battery when streaming/recording, and the internal battery is not being used)
+- [ ] Add localhost check to NodeMediaServer API to prevent unauthorized access

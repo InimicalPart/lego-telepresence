@@ -78,6 +78,10 @@ export default function CarPrepare({
                         const streamingResp = await sendAndAwait(ws, {type: "query", id: camID, query: "streaming"});
                         console.log(streamingResp);
                         if (!streamingResp.streaming) {
+                            setMessage("Making sure camera is connected to WiFi...");
+                            await sendAndAwait(ws, {type: "connectToWiFi", id: camID});
+                            setMessage("Disabling stabilization...");
+                            await sendAndAwait(ws, {type: "stabilization", enabled: false, id: camID});
                             setMessage("Starting camera feed...");
                             await sendAndAwait(ws, {type: "startStream", id: camID});
                             setMessage("Camera feed started, video feed should be visible shortly...");

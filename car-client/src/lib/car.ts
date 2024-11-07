@@ -67,9 +67,9 @@ export default class TechnicClient {
                     this.peripheral = data.peripheral
                     this.events.emit("ready")
 
-                    this.turnMotor = this.hub.getDeviceAtPort("D") as TechnicMediumAngularMotor
-                    this.frontMotor = this.hub.getDeviceAtPort("A") as TechnicMediumAngularMotor
-                    this.backMotor = this.hub.getDeviceAtPort("B") as TechnicMediumAngularMotor
+                    this.turnMotor = await this.hub.waitForDeviceAtPort("D") as TechnicMediumAngularMotor
+                    this.frontMotor = await this.hub.waitForDeviceAtPort("A") as TechnicMediumAngularMotor
+                    this.backMotor = await this.hub.waitForDeviceAtPort("B") as TechnicMediumAngularMotor
 
                     resolve(null)
                 }
@@ -142,7 +142,47 @@ export default class TechnicClient {
         // Motor A - Front Drive
         // Motor B - Back Drive
 
+        console.log("Setting wheel angle to", angle)
+
         return await this.turnMotor.gotoAngle(angle, 100)
+    }
+
+    async realMove(type: "move"|"stop", data: {
+        x: number | null,
+        y: number | null,
+        distance: number | null
+    }) {
+
+
+        if (type === "stop") {
+            console.log("Stopping")
+            await this.frontMotor.setPower(0,true)
+            await this.backMotor.setPower(0,true)
+            await this.turnMotor.gotoAngle(0, 100)
+        } else if (type === "move") {
+
+            console.log("------")
+            console.log("Setting power to", data.y*100)
+            console.log("Setting angle to", data.x*100)
+            console.log("------")
+
+            await this.turnMotor.gotoAngle(data.x*100, 100)
+            await this.frontMotor.setPower(data.y*100, true)
+            await this.backMotor.setPower(data.y*100, true)
+        }
+        return
+    }
+
+    async move(amount: number) {
+        // Motor D - Wheel Turn
+        // Motor A - Front Drive
+        // Motor B - Back Drive
+
+        console.log("Setting power to", amount)
+
+        await this.frontMotor.setPower(amount),
+        await this.backMotor.setPower(amount)
+        return
     }
 
     //! -- COMMANDS -- !\\
