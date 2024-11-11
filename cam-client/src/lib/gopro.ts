@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2024 Inimi | InimicalPart
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 import EventEmitter from 'events'
 import { Device, GattCharacteristic, GattServer, GattService } from 'node-ble'
 import protobuf from 'protobufjs'
@@ -47,6 +68,56 @@ const protomap = {
     "F5F4": {"type": "Response", "file": "live_streaming.proto", "name": "NotifyLiveStreamStatus"},
     "F5F5": {"type": "Notification", "file": "live_streaming.proto", "name": "NotifyLiveStreamStatus"}
 }
+
+const SETTINGS = {
+    VIDEO_RESOLUTION: 2,
+    FRAMES_PER_SECOND: 3,
+    VIDEO_TIMELAPSE_RATE: 5,
+    PHOTO_TIMELAPSE_RATE: 30,
+    NIGHTLAPSE_RATE: 32,
+    WEBCAM_DIGITAL_LENSES: 43,
+    AUTO_POWER_DOWN: 59,
+    GPS: 83,
+    VIDEO_ASPECT_RATIO: 108,
+    VIDEO_LENS: 121,
+    PHOTO_LENS: 122,
+    TIME_LAPSE_DIGITAL_LENSES: 123,
+    PHOTO_OUTPUT: 125,
+    MEDIA_FORMAT: 128,
+    ANTI_FLICKER: 134,
+    HYPERSMOOTH: 135,
+    VIDEO_HORIZON_LEVELING: 150,
+    PHOTO_HORIZON_LEVELING: 151,
+    MAX_LENS: 162,
+    HINDSIGHT: 167,
+    PHOTO_SINGLE_INTERVAL: 171,
+    PHOTO_INTERVAL_DURATION: 172,
+    VIDEO_PERFORMANCE_MODE: 173,
+    CONTROLS: 175,
+    EASY_MODE_SPEED: 176,
+    ENABLE_NIGHT_PHOTO: 177,
+    WIRELESS_BAND: 178,
+    STAR_TRAILS_LENGTH: 179,
+    SYSTEM_VIDEO_MODE: 180,
+    VIDEO_BIT_RATE: 182,
+    BIT_DEPTH: 183,
+    PROFILES: 184,
+    VIDEO_EASY_MODE: 186,
+    LAPSE_MODE: 187,
+    MAX_LENS_MOD: 189,
+    MAX_LENS_MOD_ENABLE: 190,
+    EASY_NIGHT_PHOTO: 191,
+    MULTI_SHOT_ASPECT_RATIO: 192,
+    FRAMING: 193,
+    CAMERA_VOLUME: 216,
+    SETUP_SCREEN_SAVER: 219,
+    SETUP_LANGUAGE: 223,
+    PHOTO_MODE: 227,
+    VIDEO_FRAMING: 232,
+    MULTI_SHOT_FRAMING: 233,
+    FRAME_RATE: 234
+}
+
 
 export default class GoProClient {
     public MAC: string
@@ -498,18 +569,6 @@ export default class GoProClient {
         return {ssid, password}
     }
 
-    async getLiveStreamStatus(): Promise<void> {
-        const LiveStreamingProto = protobuf.loadSync('protos/live_streaming.proto')
-        const RequestGetLiveStreamStatus = LiveStreamingProto.lookupType('open_gopro.RequestGetLiveStreamStatus')
-        const RequestGetLiveStreamStatusData = RequestGetLiveStreamStatus.encode(RequestGetLiveStreamStatus.create({
-            
-        })).finish()
-    
-        for (const packet of this.getProtoByteArray("F5", "74", Buffer.from(RequestGetLiveStreamStatusData).toString('hex'))) {
-            await this.characteristics.request.COMMAND.writeValue(packet)
-        }
-    }
-
     /**
      * @description Get information about the GoPro (name, model number, serial number, firmware revision, battery level)
      * @returns {Promise<{name: string, modelNumber: string, serialNumber: string, firmwareVersion: string, batteryLevel: number, MACAddress: string}>} Information about the GoPro
@@ -575,6 +634,15 @@ export default class GoProClient {
         await this.attemptReconnect(false);
         await sleep(1000);
     }
+
+    /**
+     * @description Enable the Locate feature, which makes the GoPro beep
+     * @returns {Promise<void>}
+     */
+    async locate(status: boolean): Promise<void> {
+        await this.characteristics.request.COMMAND.writeValue(this.getTLVByteArray("16", status ? "01" : "00"))
+    }
+
 
     /**
      * @description Start scanning for available networks
@@ -750,11 +818,11 @@ export default class GoProClient {
      * @returns {Promise<void>}
      */
     async setStabilization(enabled: boolean): Promise<void> {
-        await this.setSetting(135, enabled ? "01" : "00") 
+        await this.setSetting(SETTINGS.HYPERSMOOTH, enabled ? "01" : "00") 
     }
 
 
-    async setSetting(settingId: number | string, value: string) {
+    async setSetting(settingId: typeof SETTINGS[keyof typeof SETTINGS] | string, value: string) {
         if (typeof settingId === 'number') {
             settingId = settingId.toString(16).padStart(2, '0')
         }

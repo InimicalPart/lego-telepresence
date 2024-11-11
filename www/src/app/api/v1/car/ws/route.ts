@@ -40,7 +40,7 @@ export async function SOCKET(
                     return client.send(JSON.stringify({error: "Car already connected"}));
                 }
                 global.connections.push({
-                    id: await generateWSID(),
+                    id: await generateWSID("car-"),
                     type: "car",
                     car: data,
                     connection: client,

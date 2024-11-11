@@ -19,7 +19,8 @@
 - [ ] Setup LTP on external server
   - [ ] Test streaming delay, worse?
   - [ ] Custom service to auto-launch NextJS on start-up
-  - Domain? IP?
+  - [x] Domain? IP?
+    - carmeet.newseed.se
   - Do we need SSL for RTMP streaming?
 - [ ] Real-time available cars updating on /
 - [ ] Real-time car availability updating on /[UUID]/control
@@ -39,6 +40,7 @@
   - [ ] If car disconnects, the software will not try to reconnect, which it should try to do forever
 - [ ] Cam Client - Fix bugs
   - [ ] A glitch appears if the website goes down, and the camera client reconnects, requests are not handled properly
+  - [x] Sometimes a glitch can happen where the camera is told to go to sleep but at the client at the same time tries to send a keep alive message, crashing the program because two messages are being sent at once
 - [ ] Raspberry PI
   - [ ] Create services that launch the car and cam client everytime the PI starts, to allow for fast initialization
   - [ ] How do we quickly configure new Wi-Fis?
@@ -52,21 +54,16 @@
           - [ ] Use the next IP address
           - [ ] Set the static IP on the RPI via ``nmcli``:
             - ``sudo nmcli c mod <connection-name> ipv4.addresses <address>/<sub-mask-bin> ipv4.method manual``
-    - [ ] Allow SSH access to configure Wi-Fis (or quick website running on the PI allow to configure networks?)
-      - SSH
-        - RSA keys, generated beforehand
-      - Website
-        - TypeScript backend
-        - Easy and Quick UI
-          - Use ``wpa-cli`` (terminal) with a script to set the network information (possible to use scripts? ``wpa-cli`` is interactive)
-    - [ ] Make camera connect to the same Wi-Fi as the RPI
-      - [ ] Do this by getting the SSID and passkey from the RPI, and sending it to the camera during "connectToWiFi"
-- [ ] Add a way to check how much battery the powerbank has?
-  - How?
-- [ ] Add alert on control website when detected that the car has low battery
-  - Changes a lot (e.g 40% to 20% or lower on next battery check call)
-- [ ] Add alert on control website when detected that the cam has low battery
-  - [ ] Add check and icon for when the camera is charging via the powerbank
-    - Internal Battery Bars (Status ID 2)
-      - Does this work when live streaming? (camera uses the power source from the charger instead of the battery when streaming/recording, and the internal battery is not being used)
-- [ ] Add localhost check to NodeMediaServer API to prevent unauthorized access
+    - [ ] Create website to quickly access and configure Wi-Fi networks, which run on the PI.
+      - [x] TypeScript backend
+      - [x] Easy and Quick UI
+        - [ ] Use ``wpa-cli`` or ``nmcli`` (terminal) with a script to set the network information
+    - [x] Make camera connect to the same Wi-Fi as the RPI
+      - [x] Do this by getting the SSID and passkey from the RPI, and sending it to the camera during "connectToWiFi"
+- ~~[ ] Add a way to check how much battery the powerbank has?~~
+  - ~~How?~~
+- [x] Add alert on control website when detected that the car has low battery
+  - [x] Falls below 20%
+- [x] Add alert on control website when detected that the cam has low battery
+- [x] Add localhost check to NodeMediaServer API to prevent unauthorized access
+  - [x] For even more security, set a random user and password for the API endpoint of length 32

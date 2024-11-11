@@ -8,9 +8,20 @@ global.connections = [];
 global.nms = null;
 global.events = new EventEmitter();
 
+async function randomString(length: number) {
+    let result = '';
+    let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
+
 
 export async function register() {
     if (process.env.NEXT_RUNTIME === 'edge') return;
+
     global.events.on('streamConnect', async (data) => {
         console.log(`Stream connected: ${data.app}/${data.name}`);
 
@@ -47,6 +58,12 @@ export async function register() {
 
 async function setupRTMP() {
     if (process.env.NEXT_RUNTIME === 'nodejs') {
+        const APIUSER = await randomString(32);
+        const APIPASS = await randomString(32);
+    
+        console.log(`API User: ${APIUSER}`);
+        console.log(`API Pass: ${APIPASS}`);
+
         const NodeMediaServer = await import('node-media-server');
         var nms = new NodeMediaServer.default({
             rtmp: {
@@ -58,8 +75,13 @@ async function setupRTMP() {
             },
             http: {
                 port: 8000,
-                allow_origin: '*',
+                allow_origin: 'http://localhost:3000',
                 mediaroot: './media',
+            },
+            auth: {
+                api: true,
+                api_user: APIUSER,
+                api_pass: APIPASS,
             },
             logType: 0
         })

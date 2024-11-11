@@ -15,6 +15,7 @@ import InstructionsContent from "@/components/instructionsContent";
 import MovementControls from "@/components/buttons/movement";
 import KeyboardControlToggle from "@/components/buttons/keyboardControl";
 import FreeControlToggle from "@/components/buttons/freeControl";
+import AlertNearby from "@/components/buttons/alertNearby";
 
 
 declare const global: LTPGlobal;
@@ -95,6 +96,7 @@ export default async function ControlPage({ params }:any) {
                         <CardBody className="flex flex-col gap-2">
                             <KeyboardControlToggle />
                             <FreeControlToggle />
+                            <AlertNearby camId={cam?.id ?? ""} />
                         </CardBody>
                     </Card>
                 </div>

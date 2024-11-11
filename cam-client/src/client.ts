@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2024 Inimi | InimicalPart
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 import { config } from "dotenv";
 import { parse } from "jsonc-parser";
 import { readFileSync } from "fs";
@@ -6,6 +27,7 @@ import path from "path";
 import { WebSocket } from "ws";
 import GoProClient from "./lib/gopro.js";
 import si from "systeminformation"
+import { execSync } from "child_process";
 
 declare const global: CamClientGlobal;
 
@@ -124,6 +146,15 @@ async function processQueue() {
     }
 }
 
+async function randomString(length: number) {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
 async function processMessage(data: any) {
     console.log("Processing message:", data);
     if (!isConnected) {
@@ -162,47 +193,48 @@ async function processMessage(data: any) {
             await sendOK(data.nonce);
             break;
         case "connectToWiFi":
-            await connectToWiFi(data.nonce, data);
+
+
+            await camera.getStatusValues();
+            let statusValuesResponse = Buffer.from(await camera.waitForTlvResponse("13"), "hex");
+            const statusValuesParsed = await parseStatusValues(statusValuesResponse) as any
+
+            if (!data.ssid && !data.password) {
+                const net = await getConnectedWiFi();
+
+                data.ssid = net.ssid;
+                data.password = net.psk;
+            }
+
+            if (data.ssid != statusValuesParsed.connectedAP) {
+                const success = await connectToWiFi(data);
+                if (success) {
+                    await sendOK(data.nonce)
+                } else {
+                    socket.send(JSON.stringify({error: "Failed to connect to WiFi", nonce: data.nonce}));
+                }
+            } else {
+                await sendOK(data.nonce)
+            }
             break;
         case "sleep":
+            keepAliveEnabled = false
+            msgQueue = []
+            await sleep(100)
             await camera.sleep();
             await sendOK(data.nonce);
             break;
         case "powerOff":
+            keepAliveEnabled = false
+            msgQueue = []
+            await sleep(100)
             await camera.powerOff();
             await sendOK(data.nonce);
             break;
         case "getStatusValues":
             await camera.getStatusValues();
             let resp = Buffer.from(await camera.waitForTlvResponse("13"), "hex");
-
-            const finalDict = {}
-
-            while (resp.length > 0) {
-                //STATUS_ID (2 bytes)
-                //LENGTH (2 bytes)
-                //VALUE (LENGTH bytes)
-
-                const STATUS_ID = resp.subarray(0, 1)
-                const LENGTH = resp.subarray(1, 2)
-                const VALUE = resp.subarray(2, 2 + parseInt(LENGTH.toString("hex"), 16));
-            
-                switch (STATUS_ID.toString("hex").toUpperCase()) {
-                    case "1D":
-                        //* Connected AP Name
-                        finalDict["connectedAP"] = VALUE.toString("utf-8");
-                        break;
-                    default:
-                        console.warn("Unknown status ID:", STATUS_ID.toString("hex").toUpperCase());
-                        break;
-                    
-                }
-
-                const removeLength = 2 + parseInt(LENGTH.toString("hex"), 16);
-                resp = resp.subarray(removeLength);
-            }
-
-            socket.send(JSON.stringify({type: "statusValues", data: finalDict, nonce: data.nonce}));
+            socket.send(JSON.stringify({type: "statusValues", data: await parseStatusValues(resp), nonce: data.nonce}));
             break;
         case "wake":
             while (!isConnected) {
@@ -229,18 +261,58 @@ async function processMessage(data: any) {
             await camera.setStabilization(data.enabled ?? true);
             await sendOK(data.nonce);
             break;
-        case "test":
-            await camera.getLiveStreamStatus();
-            const resp2 = await camera.waitForProtoResponse("F5", "F4");
-
-            console.log("Test response:", resp2);
-            socket.send(JSON.stringify({type: "test", data: resp2, nonce: data.nonce}));
+        case "alert":
+            await camera.locate(true);
+            await sleep(500)
+            await camera.locate(false);
+            await sendOK(data.nonce);
             break;
         default:
             break;
     }
 
     console.log("Message processed");
+}
+
+async function parseStatusValues(resp: Buffer) {
+
+    const finalDict = {}
+
+    while (resp.length > 0) {
+        //STATUS_ID (2 bytes)
+        //LENGTH (2 bytes)
+        //VALUE (LENGTH bytes)
+
+        const STATUS_ID = resp.subarray(0, 1)
+        const LENGTH = resp.subarray(1, 2)
+        const VALUE = resp.subarray(2, 2 + parseInt(LENGTH.toString("hex"), 16));
+    
+        switch (STATUS_ID.toString("hex").toUpperCase()) {
+            case "1D":
+                //* Connected AP Name
+                finalDict["connectedAP"] = VALUE.toString("utf-8");
+                break;
+            default:
+                console.warn("Unknown status ID:", STATUS_ID.toString("hex").toUpperCase());
+                break;
+            
+        }
+
+        const removeLength = 2 + parseInt(LENGTH.toString("hex"), 16);
+        resp = resp.subarray(removeLength);
+    }
+
+    return finalDict;
+}
+
+async function getConnectedWiFi() {
+    const stdout = execSync("nmcli -t -c no device wifi show-password");
+    const lines = stdout.toString().split("\n");
+
+    const ssid = lines.find((line) => line?.toUpperCase()?.startsWith("SSID"))?.split(":")?.[1]?.trim();
+    const psk = lines.find((line) => line?.toUpperCase()?.startsWith("PASSWORD"))?.split(":")?.[1]?.trim();
+
+    return {ssid, psk};
 }
 
 async function sendStatus(nonce: string) {
@@ -277,18 +349,13 @@ async function sendOK(nonce: string) {
 
 async function startBroadcast(data: any) {
     if (data.url) {
-        console.log("preparing to start broadcast", data)
         await camera.setLiveStreamMode({
             url: data.url,
             ...data.options
         });
-        console.log("awaiting acknoledgement");
         await camera.waitForProtoResponse("F1", "F9") // Wait for acknowledgement
-        console.log("Camera is now ready to stream");
         await sleep(5000);
-        console.log("starting capture");
         await camera.startCapture();
-        console.log("stared capture");
     }
 }
 
@@ -324,7 +391,7 @@ async function getHostname() {
     }
 }
 
-async function connectToWiFi(nonce: string, data) {
+async function connectToWiFi(data) {
     await camera.scanAvailableAPs()
     
     let scanId	= null;
@@ -334,16 +401,14 @@ async function connectToWiFi(nonce: string, data) {
         scanId = response.scanId
         totalEntries = response.totalEntries
     } else {
-        socket.send(JSON.stringify({error: "Scanning failed", nonce}))
-        return
+        return false
     }
     
     await camera.getAPResults(scanId, totalEntries)
     const ap = (await camera.waitForProtoResponse("02", "83")).entries.find((a: any) => a.ssid == data.ssid)
     
     if (!ap) {
-        socket.send(JSON.stringify({error: "AP not found", nonce}))
-        return
+        return false
     }
     
     // not connected
@@ -371,12 +436,11 @@ async function connectToWiFi(nonce: string, data) {
                     "11": "PROVISIONING_ERROR_UNSUPPORTED_TYPE"
                 }
 
-                socket.send(JSON.stringify({error: provisioningStateMap[response.provisioningState], nonce}))
-                return
+                return false
             }
     }
 
-    await sendOK(nonce)
+    return true
 }
 
 async function sleep(ms: number) {
