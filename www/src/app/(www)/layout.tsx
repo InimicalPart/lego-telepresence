@@ -2,6 +2,7 @@
 import "@/styles/globals.css"
 import { Providers } from "@/components/providers";
 import { Viewport } from "next";
+import { Toaster } from 'sonner';
 
 export const viewport: Viewport = {
 	themeColor: [
@@ -21,6 +22,7 @@ export default function RootLayout({
             <body>
                 <Providers themeProps={{ attribute: "class", defaultTheme: "light", children }}>
                     {children}
+                    <Toaster expand richColors position="top-right"/>
                 </Providers>
             </body>
         </html>

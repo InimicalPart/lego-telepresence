@@ -4,6 +4,7 @@ import { LTPGlobal } from "@/interfaces/global";
 import { useEffect, useState } from "react";
 import { Battery, QuestionMark, Sleeping, X } from "./icons";
 import {Tooltip} from "@nextui-org/react";
+import { toast } from "sonner";
 
 declare const global: LTPGlobal
 
@@ -11,11 +12,17 @@ export default function BatteryFetcher({
     id,
     asIcon = false,
     size = 24,
-    delay = 1000
-}: {id:string, asIcon?:boolean, size?:number, delay?:number}) {
+    delay = 1000,
+
+    toastAnnounceLowBattery = true,
+    lowBatteryThreshold: LowBatteryThreshold = 10,
+
+
+}: {id:string, asIcon?:boolean, size?:number, delay?:number, toastAnnounceLowBattery?:boolean, lowBatteryThreshold?:number}) {
     const [battery, setBattery] = useState(-1);
     const [sleeping, setSleeping] = useState(false);
     const [connected, setConnected] = useState(true);
+    const [announcedLowBattery, setAnnouncedLowBattery] = useState(false);
     let ws: WebSocket | null = null;
     let checkTimer: NodeJS.Timeout | null = null;
 
@@ -42,6 +49,12 @@ export default function BatteryFetcher({
             }
             if (data.type === "battery") {
                 setBattery(data.level);
+                if (data.level <= LowBatteryThreshold && toastAnnounceLowBattery && !announcedLowBattery) {
+                    toast.error("Low Battery - " + (id.startsWith("car")?"Car":"Camera"), {duration: 60000, description: `Battery level is at ${data.level}%`})
+                    setAnnouncedLowBattery(true);
+                } else if (data.level > LowBatteryThreshold) {
+                    setAnnouncedLowBattery(false);
+                }
             } else if (data.type === "status") {
                 if (data.sleeping) {
                     setSleeping(true);
@@ -71,7 +84,7 @@ export default function BatteryFetcher({
             if (ws && ws.readyState === ws.OPEN) ws.close();
             if (checkTimer) clearInterval(checkTimer);
         }
-    },[id])
+    },[id, announcedLowBattery, toastAnnounceLowBattery, LowBatteryThreshold])
 
     return <Tooltip delay={delay} placement="bottom" showArrow={true} content={<p className="">
         {

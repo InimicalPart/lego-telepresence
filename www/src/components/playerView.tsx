@@ -26,11 +26,11 @@ export default function PlayerView({camId, carId}:{camId: string | null, carId: 
                     <div className="flex flex-row gap-5 mr-4">
                         <div className="flex flex-col">        
                             <Camera size={24}/>                
-                            <BatteryFetcher delay={500} id={camId??""} asIcon/> 
+                            <BatteryFetcher delay={500} id={camId??""} asIcon toastAnnounceLowBattery lowBatteryThreshold={20}/> 
                         </div>
                         <div className="flex flex-col">                        
                             <Car size={24}/>                
-                            <BatteryFetcher delay={500} id={carId??""} asIcon/>
+                            <BatteryFetcher delay={500} id={carId??""} asIcon toastAnnounceLowBattery lowBatteryThreshold={20}/>
                         </div>
                     </div>
                 </CardFooter>

@@ -2,6 +2,7 @@
   "name": "lego-telepresence",
   "version": "0.1.0",
   "private": true,
+  "author": "Inimi",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -23,6 +24,7 @@
     "react-dom": "^18.3.1",
     "react-flv-player": "^1.0.9",
     "react-joystick-component": "^6.2.1",
+    "sonner": "^1.7.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

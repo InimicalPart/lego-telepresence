@@ -101,29 +101,21 @@ export async function SOCKET(
                 await sleep(5000)
             
             case "connectToWiFi":
-                const returnInfo = await conn.connection.sendAndAwait({type: "getStatusValues"}, 30000).catch((error) => {
-                    console.log(`[WS] Error sending 'getStatusValues': ${error}`);
-                    client.send(JSON.stringify({error: "Error sending 'getStatusValues'", connId, nonce}));
+                await conn.connection.sendAndAwait({type: "connectToWiFi"}, 30000).then((response) => {
+                    if (response.error) {
+                        console.log(`[WS] Error sending 'connectToWiFi': ${response.error}`);
+                        client.send(JSON.stringify({error: "Error sending 'connectToWiFi'", connId, nonce}));
+                    } else {
+                        if (data.type !== "restartStream") {
+                            client.send(JSON.stringify({...response, connId, nonce}));
+                        }
+                    }
+                }).catch((error) => {
+                    console.log(`[WS] Error sending 'connectToWiFi': ${error}`);
+                    client.send(JSON.stringify({error: "Error sending 'connectToWiFi'", connId, nonce}));
                 })
 
-
-                if (returnInfo?.data?.connectedAP != process.env.CAM_SSID) {
-                    await conn.connection.sendAndAwait({type: "connectToWiFi", ssid: process.env.CAM_SSID, password: process.env.CAM_PASSWORD}, 30000).then((response) => {
-                        if (response.error) {
-                            console.log(`[WS] Error sending 'connectToWiFi': ${response.error}`);
-                            client.send(JSON.stringify({error: "Error sending 'connectToWiFi'", connId, nonce}));
-                        } else {
-                            if (data.type !== "restartStream") {
-                                client.send(JSON.stringify({...response, connId, nonce}));
-                            }
-                        }
-                    }).catch((error) => {
-                        console.log(`[WS] Error sending 'connectToWiFi': ${error}`);
-                        client.send(JSON.stringify({error: "Error sending 'connectToWiFi'", connId, nonce}));
-                    })
-                } else if (data.type !== "restartStream") {
-                    client.send(JSON.stringify({error: "Already connected to WiFi", connId, nonce}));
-                }
+                
                 if (data.type !== "restartStream") break;
             case "startStream":
                 if (!conn.cam) {
@@ -199,19 +191,18 @@ export async function SOCKET(
                 delete data.id;
                 conn.connection.send({type: type, data })
                 break;
-            case "test":
+            case "alert":
                 if (!conn.cam) {
-                    console.log(`[WS] User requested test from non-camera connection: ${connId}`);
+                    console.log(`[WS] User requested alert from non-camera connection: ${connId}`);
                     return client.send(JSON.stringify({error: "Connection is not a camera"}));
                 }
 
-                conn.connection.sendAndAwait({type: "test"}, 30000).then((response) => {
+                conn.connection.sendAndAwait({type: "alert", message: data.message}, 30000).then((response) => {
                     client.send(JSON.stringify({...response, connId, nonce}));
                 }).catch((error) => {
-                    console.log(`[WS] Error sending 'test': ${error}`);
-                    client.send(JSON.stringify({error: "Error sending 'test'", connId, nonce}));
+                    console.log(`[WS] Error sending 'alert': ${error}`);
+                    client.send(JSON.stringify({error: "Error sending 'alert'", connId, nonce}));
                 })
-
 
                 break;
             default:

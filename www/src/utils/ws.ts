@@ -3,7 +3,7 @@ import { WebSocket } from "ws";
 
 declare const global: LTPGlobal;
 
-export async function generateWSID() {
+export async function generateWSID(prefix: string = "") {
     function getID() {
         let result = '';
         let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -15,9 +15,9 @@ export async function generateWSID() {
     }
 
 
-    let result = getID();
+    let result = prefix + getID();
     while (global.connections.some(conn => conn.id === result)) {
-        result = getID();
+        result = prefix + getID();
     }
     return result;
 }

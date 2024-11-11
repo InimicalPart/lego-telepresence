@@ -40,7 +40,7 @@ export async function SOCKET(
                     return client.send(JSON.stringify({error: "Camera already connected"}));
                 }
                 global.connections.push({
-                    id: await generateWSID(),
+                    id: await generateWSID("cam-"),
                     type: "cam",
                     cam: {
                         ...data,
@@ -51,8 +51,6 @@ export async function SOCKET(
                 });
                 client.send(JSON.stringify({type: "connected"}));
                 console.log(`[WS] Camera connected: ${data.serialNumber}`);
-                client.send(JSON.stringify({type: "keepAlive", enabled: true}));
-                await new Promise(resolve => setTimeout(resolve, 5000));
                 client.send(JSON.stringify({type: "sleep"})) // Put the camera to sleep to save power
                 break;
             case "ok":
