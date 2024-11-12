@@ -20,33 +20,14 @@
  */
 
 import DashboardElements from "@/components/dashboard";
-import { createWiFiCommandGenerator, runTerminalCommand } from "@/util/cmd";
-import { JWTCheck } from "@/util/credCheck";
+import { JWTCheck } from "@/lib/credCheck";
 
 declare const global: WiFiWebGlobal
 
-
-import { z } from 'zod'
-import { getConnections, getCurrentConnection } from "../../util/networks";
- 
-const schema = z.object({
-    ssid: z.string({
-            invalid_type_error: 'Invalid SSID',
-            required_error: 'SSID is required'
-        })
-        .min(1, { message: 'SSID is required' })
-        .max(32, { message: 'SSID must be at most 32 characters long' }),
-    password: z.string({
-            invalid_type_error: 'Invalid password',
-            required_error: 'Password is required'
-        })
-        .min(8, { message: 'Password must be at least 8 characters long' })
-        .max(63, { message: 'Password must be at most 63 characters long' }),
-    authtype: z.string({
-        invalid_type_error: 'Invalid authentication type',
-        required_error: 'Authentication type is required'
-    })
-})
+import { getConnections, getCurrentConnection } from "../../lib/networks";
+import { cookies } from "next/headers";
+import { getPrivileges, getUsernameFromJWT } from "@/lib/credentialManager";
+import UserPrivileges, { Privileges } from "@/lib/privileges";
 
 export default async function Home() {
 
@@ -54,33 +35,14 @@ export default async function Home() {
     const res = await JWTCheck();
     if (res !== true) return res;
 
-    async function create(_:any, form:FormData){
-        "use server"
+    const user = await getUsernameFromJWT((await cookies())?.get("auth")?.value?.toString() as string | null, global.hostname)
+    const privileges = getPrivileges(user as string)
 
-
-
-    }
-    async function del(_:any, form:FormData){
-        "use server"
-        const uuid = form.get('uuid')?.toString()
-        if (!uuid || !uuid.match(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/)) {
-            return {message: "Invalid UUID"}
-        }
-
-        await runTerminalCommand(`nmcli connection delete ${uuid}`)
-        await getConnections()
-        await getCurrentConnection()
-        return {}
-    }
-    async function edit(_:any, form:FormData){
-        "use server"
-        console.log(form)
-    }
-
+    await getConnections()
     await getCurrentConnection()
 
 
     return (
-            <DashboardElements events={{onCreate: create, onEdit: edit, onDelete: del}}  connections={global.connections} currentConnection={global.currentConnection} hostname={global.hostname}/>
+            <DashboardElements user={user as string} privileges={privileges?.toMask() ?? 0} connections={global.connections} interfaces={global.interfaces} hostname={global.hostname}/>
     );
 }

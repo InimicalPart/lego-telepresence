@@ -20,11 +20,11 @@
  */
 
 import LogInForm from "@/components/logInForm";
-import { runTerminalCommand } from "@/util/cmd";
+import { runTerminalCommand } from "@/lib/cmd";
 import { Button, Card, CardBody, CardHeader, Input, Spacer } from "@nextui-org/react";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
-import { JWTFromCreds, verifyCreds, verifyJWT } from "@/util/credentialManager";
+import { JWTFromCreds, verifyCreds, verifyJWT } from "@/lib/credentialManager";
 import { redirect } from "next/navigation";
 
 import { z } from 'zod'

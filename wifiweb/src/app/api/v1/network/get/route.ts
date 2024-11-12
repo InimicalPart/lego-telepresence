@@ -1,5 +1,5 @@
-import { JWTCheck } from "@/util/credCheck";
-import { getConnections, getCurrentConnection } from "@/util/networks";
+import { JWTCheck } from "@/lib/credCheck";
+import { getConnections, getCurrentConnection } from "@/lib/networks";
 import { NextApiRequest } from "next";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
         connections: global.connections,
-        currentConnection: global.currentConnection
     }, {status:200})
 
 

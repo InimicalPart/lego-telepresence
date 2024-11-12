@@ -1,13 +1,11 @@
-import { runTerminalCommand } from "@/lib/cmd";
+import { activateConnection, deactivateConnection, modifyWiFiCommandGenerator, runTerminalCommand } from "@/lib/cmd";
 import { JWTCheck } from "@/lib/credCheck";
 import { getConnections, getCurrentConnection } from "@/lib/networks";
-import { NextApiRequest } from "next";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 declare const global: WiFiWebGlobal
 
-export async function DELETE(req: NextRequest, {params}: {params:Promise<{UUID: string}>}) {
+export async function POST(req: NextRequest, {params}: {params:Promise<{UUID: string}>}) {
     const { UUID } = await params
     const res = await JWTCheck(true)
     if (res !== true) return NextResponse.json({message: "Unauthorized"}, {status: 401})
@@ -17,13 +15,24 @@ export async function DELETE(req: NextRequest, {params}: {params:Promise<{UUID: 
         return NextResponse.json({message: "Invalid UUID"}, {status: 400})
     }
 
-    if (!global.connections.find((i) => i.uuid === uuid)) {
+
+    const connection = global.connections.find((i) => i.uuid === uuid)
+
+    if (!connection) {
         return NextResponse.json({message: "Connection not found"}, {status: 404})
     }
 
-    await runTerminalCommand(`nmcli connection delete ${uuid}`)
+    // TODO: add validation
 
+    await deactivateConnection(UUID)
+
+    await getConnections()
+    await getCurrentConnection()
     return NextResponse.json({message: "OK"}, {status: 200})
+}
 
-
+function sleep(ms: number) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms)
+    })
 }
