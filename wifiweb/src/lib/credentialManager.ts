@@ -22,10 +22,12 @@
 import * as jose from 'jose'
 import bcrypt from "bcrypt";
 import { readFileSync } from "fs";
+import UserPrivileges from './privileges';
 
 const users: {
     username: string,
     password: string,
+    privileges: number
 }[] = JSON.parse(readFileSync("users.json", {encoding: "utf-8"}).toString());
 
 const secret = new TextEncoder().encode(
@@ -46,6 +48,19 @@ export async function JWTFromCreds(creds: { username: string, password: string, 
     .setAudience('inimi:wifiweb:'+creds.hostname)
     .setExpirationTime('2h')
     .sign(secret);
+}
+
+export async function getUsernameFromJWT(jwt: string | null, hostname:string) {
+
+    if (!jwt) return null;
+
+    const { payload } = await jose.jwtVerify(jwt, secret, {
+        issuer: 'inimi:wifiweb:'+hostname,
+        audience: 'inimi:wifiweb:'+hostname,
+        algorithms: ['HS256']
+    })
+
+    return payload.username as string;
 }
 
 export async function verifyJWT(jwt: string, hostname: string) {
@@ -81,5 +96,11 @@ export async function verifyCreds(creds: { username: string, password: string })
     if (!user) return false;
 
     return await verifyPassword(creds.password, user.password);
+}
 
+
+export const getPrivileges = (user: string) => {
+    const u = users.find(u => u.username === user);
+    if (!u) return null
+    return new UserPrivileges(u.privileges);
 }

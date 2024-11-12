@@ -20,7 +20,7 @@
   - [ ] Test streaming delay, worse?
   - [ ] Custom service to auto-launch NextJS on start-up
   - [x] Domain? IP?
-    - carmeet.newseed.se
+    - legomeet.newseed.se
   - Do we need SSL for RTMP streaming?
 - [ ] Real-time available cars updating on /
 - [ ] Real-time car availability updating on /[UUID]/control

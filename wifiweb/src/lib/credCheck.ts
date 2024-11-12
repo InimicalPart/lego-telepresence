@@ -20,7 +20,7 @@
  */
 
 import { cookies } from "next/headers";
-import { verifyJWT } from "./credentialManager";
+import { verifyJWT } from "../lib/credentialManager";
 import { redirect } from "next/navigation";
 
 declare const global: WiFiWebGlobal

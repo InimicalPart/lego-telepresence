@@ -1,6 +1,6 @@
-import { runTerminalCommand } from "@/util/cmd";
-import { JWTCheck } from "@/util/credCheck";
-import { getConnections, getCurrentConnection } from "@/util/networks";
+import { runTerminalCommand } from "@/lib/cmd";
+import { JWTCheck } from "@/lib/credCheck";
+import { getConnections, getCurrentConnection } from "@/lib/networks";
 import { NextApiRequest } from "next";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";

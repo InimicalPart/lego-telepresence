@@ -1,11 +1,13 @@
-import { createWiFiCommandGenerator, runTerminalCommand } from "@/util/cmd";
-import { getConnections, getCurrentConnection } from "@/util/networks";
+import { createWiFiCommandGenerator, runTerminalCommand } from "@/lib/cmd";
+import { getConnections, getCurrentConnection } from "@/lib/networks";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
 
 
     const form = await req.formData()
+
+    // TODO: add validation
 
     const staticOptionsExist = !!form.get('set-static')
 
@@ -27,6 +29,7 @@ export async function POST(req: NextRequest) {
             retries: form.get('autoconnect-retries') ? parseInt(form.get('autoconnect-retries') as string) : 5
         },
         hidden: !!form.get('hidden'),
+        interface: form.get('interface') as string ?? null
     })
 
     await runTerminalCommand(cmd)
