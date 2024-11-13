@@ -21,7 +21,7 @@
 
 "use client";
 
-import { Card, CardHeader, CardBody, useDisclosure, Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Input, Select, SelectItem, Spacer, Checkbox, CheckboxGroup, Tooltip, Divider, Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
+import { Card, CardHeader, CardBody, useDisclosure, Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Input, Select, SelectItem, Spacer, Checkbox, CheckboxGroup, Tooltip, Divider, Popover, PopoverContent, PopoverTrigger, CardFooter } from "@nextui-org/react";
 import { useActionState, useEffect, useState } from "react";
 import { AddIcon, DeleteIcon, EditIcon, EyeFilledIcon, EyeSlashFilledIcon } from "./icons";
 import "@/styles/active-dot.css"
@@ -30,6 +30,8 @@ import { useRouter } from "next/navigation";
 import { CIDRToSubnetMask } from "@/lib/subnetmask";
 import { ScrollArea } from "@/components/ui/scroll-area"
 import UserPrivileges, { Privileges } from "@/lib/privileges";
+import { UsersTable } from "./usersTable";
+import { toast } from "sonner";
 
 export default function DashboardElements({user, privileges: userPrivs, connections, interfaces, hostname}:{user: string, privileges: UserPrivileges["privileges"], connections:WiFiWebGlobal["connections"], interfaces:WiFiWebGlobal["interfaces"], hostname: string}) {
 
@@ -218,33 +220,43 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
             <div className="flex flex-row gap-2">
                 <div className="flex flex-col gap-2">
 
-                <Card className="h-[20rem] w-[30rem] flex">
+                <Card className="h-[29.75rem] w-[30rem] flex">
                     <CardHeader className="flex flex-row justify-between items-center font-bold gap-2">
                         <p className="!justify-self-center ml-2">System Information</p>
                     </CardHeader>
-                    <ScrollArea>
+                    <ScrollArea style={{
+                        scrollbarColor: "red"
+                    }}
+                    >
                         <CardBody className="flex gap-2">
                             
                         </CardBody>
                     </ScrollArea>
                 </Card>
-                <Card className={`h-[20rem] w-[30rem] flex ${!privileges.hasPrivileges(Privileges.MANAGE_USERS) ? "hidden" : ""}`}>
+                <Card className={`h-[29.75rem] w-[30rem] flex ${!privileges.has(Privileges.MANAGE_USERS) ? "hidden" : ""}`}>
                     <CardHeader className="flex flex-row justify-between items-center font-bold gap-2">
                         <p className="!justify-self-center ml-2">Users</p>
-                        </CardHeader>
+                    </CardHeader>
+                    <CardBody>
                     <ScrollArea>
-                    <CardBody className="flex gap-2">
-                        <p className="text-center">Logged in as <b>{user}</b></p>
-                            <Button variant="flat" color="primary">Add User</Button>
-                            <Button variant="flat" color="danger">Delete User</Button>
-                            <Button variant="flat" color="default">Edit User</Button>
-                        </CardBody>
+                        <UsersTable currentUser={user} />
                     </ScrollArea>
+                    </CardBody>
+                    <CardFooter>
+                        <div className="flex flex-row gap-2 justify-center items-center w-full">
+                            <Button variant="flat" color="primary" className="w-full mx-5" onClick={()=>{
+                                toast.error("Woo!", {
+                                    description: "You click the thing I haven't implemented yet! 👏👏👏",
+                                    duration: 5000
+                                })
+                            }}>Create a new user</Button>
+                        </div>
+                    </CardFooter>
                 </Card>
                 </div>
                 
 
-                <Card className="h-[80dvh] w-[30rem] flex">
+                <Card className="h-[60rem] w-[30rem] flex">
                     <CardHeader className="flex flex-row justify-between items-center font-bold gap-2">
                         <p className="!justify-self-center ml-2">Network Connections</p>
                         <Button className="!min-w-0 !justify-self-end" color="default" onClick={()=>onAddOpen()} isDisabled={deletePending || createPending || editPending}>

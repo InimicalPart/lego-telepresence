@@ -6,3 +6,21 @@
     --radius: 0.5rem
   }
 }
+
+.header-alert {
+  transition: height 0.5s;
+}
+
+.header-text {
+    transition: top 0.75s, opacity 1s;
+    top:0;
+}
+
+.header-alert.hide {
+  height: 0;
+}
+
+.header-text.hide {
+    top: -15px;
+    opacity: 0;
+}

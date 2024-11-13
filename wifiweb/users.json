@@ -1,7 +1,10 @@
 [
-    {
-        "username": "admin",
-        "password": "$2b$10$TztAX9VzHfdTaLkaFxngQuwFLHhHsQiIeQMXFPHAr6YD0s6QJ9AVi",
-        "privileges": 1
-    }
+  {
+    "uuid": "496e696d-6957-4073-4865-7265207844a0",
+    "username": "admin",
+    "password": "$2b$10$TztAX9VzHfdTaLkaFxngQuwFLHhHsQiIeQMXFPHAr6YD0s6QJ9AVi",
+    "privileges": 1,
+    "createdAt": "2024-11-13T08:41:35.737Z",
+    "createdBy": "SYSTEM"
+  }
 ]

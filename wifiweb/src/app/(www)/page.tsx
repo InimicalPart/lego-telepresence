@@ -26,14 +26,15 @@ declare const global: WiFiWebGlobal
 
 import { getConnections, getCurrentConnection } from "../../lib/networks";
 import { cookies } from "next/headers";
-import { getPrivileges, getUsernameFromJWT } from "@/lib/credentialManager";
+import { getPrivileges, getUsernameFromJWT, getUserPassHash, isDefaultPassword } from "@/lib/credentialManager";
 import UserPrivileges, { Privileges } from "@/lib/privileges";
+import DefaultPasswordAlert from "@/components/defaultPasswordAlert";
 
 export default async function Home() {
 
     //! Check if the user is logged in, if not, redirect to login page
     const res = await JWTCheck();
-    if (res !== true) return res;
+    if (res.success !== true) return res;
 
     const user = await getUsernameFromJWT((await cookies())?.get("auth")?.value?.toString() as string | null, global.hostname)
     const privileges = getPrivileges(user as string)
@@ -41,8 +42,13 @@ export default async function Home() {
     await getConnections()
     await getCurrentConnection()
 
+    const isDefaultPass = await isDefaultPassword(await getUserPassHash(user as string) ?? "")
+
 
     return (
+        <>
+            <DefaultPasswordAlert isDefault={isDefaultPass}/> 
             <DashboardElements user={user as string} privileges={privileges?.toMask() ?? 0} connections={global.connections} interfaces={global.interfaces} hostname={global.hostname}/>
+        </>
     );
 }

@@ -10,7 +10,7 @@ declare const global: WiFiWebGlobal
 export async function DELETE(req: NextRequest, {params}: {params:Promise<{UUID: string}>}) {
     const { UUID } = await params
     const res = await JWTCheck(true)
-    if (res !== true) return NextResponse.json({message: "Unauthorized"}, {status: 401})
+    if (res.success !== true) return NextResponse.json({message: "Unauthorized"}, {status: 401})
 
     const uuid = UUID as string
     if (!uuid || !uuid.match(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/)) {

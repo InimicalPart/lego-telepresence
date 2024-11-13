@@ -20,12 +20,12 @@
  */
 
 import { cookies } from "next/headers";
-import { verifyJWT } from "../lib/credentialManager";
+import { getPrivileges, verifyJWT } from "../lib/credentialManager";
 import { redirect } from "next/navigation";
 
 declare const global: WiFiWebGlobal
 
-export async function JWTCheck(noRedirect: boolean = false) {
+export async function JWTCheck(noRedirect: boolean = false, requiredPrivileges: number = 0) {
     const authCookie = (await cookies())?.get("auth");
 
     if (authCookie) {
@@ -34,10 +34,24 @@ export async function JWTCheck(noRedirect: boolean = false) {
         const isValid = verifyResult !== false;
 
         if (!isValid) {
-            return noRedirect ? false : redirect("/login")
+            return noRedirect ? {success: false} : redirect("/login")
         }
+
+        if (requiredPrivileges) {
+            const privs = getPrivileges(verifyResult.username)
+            if (!privs || !privs.has(requiredPrivileges)) {
+                return noRedirect ? {success: false} : redirect("/")
+            }
+        }
+
+
+        return {
+            success: true,
+            username: verifyResult.username,
+            privileges: getPrivileges(verifyResult.username)?.toMask() ?? null
+        }
+
     } else {
-        return noRedirect ? false : redirect("/login")
+        return noRedirect ? {success: false} : redirect("/login")
     }
-    return true;
 }

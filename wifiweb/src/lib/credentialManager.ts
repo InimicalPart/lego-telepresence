@@ -23,11 +23,15 @@ import * as jose from 'jose'
 import bcrypt from "bcrypt";
 import { readFileSync } from "fs";
 import UserPrivileges from './privileges';
+import { writeFile } from 'fs/promises';
 
 const users: {
+    uuid: string,
     username: string,
     password: string,
-    privileges: number
+    privileges: number,
+    createdAt: string
+    createdBy: string
 }[] = JSON.parse(readFileSync("users.json", {encoding: "utf-8"}).toString());
 
 const secret = new TextEncoder().encode(
@@ -63,6 +67,12 @@ export async function getUsernameFromJWT(jwt: string | null, hostname:string) {
     return payload.username as string;
 }
 
+export async function getUserPassHash(user: string) {
+    const u = users.find(u => u.username === user);
+    if (!u) return null;
+    return u.password;
+}
+
 export async function verifyJWT(jwt: string, hostname: string) {
 
     try {
@@ -72,7 +82,6 @@ export async function verifyJWT(jwt: string, hostname: string) {
             algorithms: ['HS256']
         })
         
-
         return verifyCreds({
             username: payload.username as string,
             password: Buffer.from(payload.password as string, "base64").toString("utf-8")
@@ -81,6 +90,26 @@ export async function verifyJWT(jwt: string, hostname: string) {
         return false;
     }
 
+}
+
+export async function changeUserPassword(user: string, newPass: string) {
+    const u = users.find(u => u.username === user);
+    if (!u) return false;
+
+    u.password = await hashPassword(newPass);
+
+    await saveUsersDB();
+
+    return true;
+}
+
+export async function saveUsersDB() {
+    return await writeFile("users.json", JSON.stringify(users, null, 2), {encoding: "utf-8"});
+}
+
+export async function reloadUsersDB() {
+    const data = JSON.parse(readFileSync("users.json", {encoding: "utf-8"}).toString());
+    users.splice(0, users.length, ...data);
 }
 
 export async function hashPassword(password: string) {
@@ -95,7 +124,18 @@ export async function verifyCreds(creds: { username: string, password: string })
     const user = users.find(u => u.username === creds.username);
     if (!user) return false;
 
-    return await verifyPassword(creds.password, user.password);
+    const valid = await verifyPassword(creds.password, user.password)
+
+    return valid ? creds : false;
+}
+
+export async function isDefaultPassword(hash: string) {
+    //! Yes I know I obfuscated this for absolutely no reason, but it's fun and I'm proud of it. !\\
+    return await bcrypt.compare(Buffer.from(Buffer.from(Uint8Array.from([7.6,7.7,12,10.7,12.7,12,10.9,11.9,13.2,13.2,7.5,12.6].map((_,__)=>(_*10)-__-15))).toString("utf-8").split('').reverse().join(''), "base64").toString("utf-8"), hash);
+}
+
+export function getUsers(mapFunction: (user: { username: string, privileges: number, password: string, uuid: string, createdAt: string, createdBy:string }) => any = (u) => u) {
+    return users.map(mapFunction);
 }
 
 
@@ -103,4 +143,16 @@ export const getPrivileges = (user: string) => {
     const u = users.find(u => u.username === user);
     if (!u) return null
     return new UserPrivileges(u.privileges);
+}
+
+export async function getUserByUUID(uuid: string) {
+    return users.find(u => u.uuid === uuid) ?? null;
+}
+export async function generatePassword(length: number = 16) {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$&";
+    let pass = "";
+    for (let i = 0; i < length; i++) {
+        pass += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return pass;
 }

@@ -28,6 +28,7 @@ import { JWTFromCreds, verifyCreds, verifyJWT } from "@/lib/credentialManager";
 import { redirect } from "next/navigation";
 
 import { z } from 'zod'
+import ClearAlerts from "@/components/clearAlerts";
  
 const schema = z.object({
     username: z.string({
@@ -49,7 +50,7 @@ export default async function LoginPage() {
         const verifyResult = await verifyJWT(authCookie.value, hostname);
 
         const isValid = verifyResult !== false;
-
+        
         if (isValid) {
             return redirect("/")
         }
@@ -94,17 +95,17 @@ export default async function LoginPage() {
 
 
     return (
-    <div className="flex w-[100dvw] h-[100dvh] justify-center items-center">
+        <div className="flex w-[100dvw] h-[100dvh] justify-center items-center">
+            <ClearAlerts />
+            <Card >
+                <CardHeader className="flex justify-center items-center">
+                    <p>Log In to <b>{hostname}</b></p>
+                </CardHeader>
+                <CardBody>
+                    <LogInForm onLogIn={logIn} />
+                </CardBody>
+            </Card>
 
-        <Card >
-            <CardHeader className="flex justify-center items-center">
-                <p>Log In to <b>{hostname}</b></p>
-            </CardHeader>
-            <CardBody>
-                <LogInForm onLogIn={logIn} />
-            </CardBody>
-        </Card>
-
-    </div>
+        </div>
   );
 }
