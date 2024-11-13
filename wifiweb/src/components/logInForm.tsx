@@ -38,8 +38,8 @@ export default function LogInForm({onLogIn}:{
 
     return (
         <form action={submitFormAction} className="flex flex-col justify-center items-center gap-2">
-        <Input autoComplete="username" variant="bordered" label="Username" type="text" name="username" placeholder="Username" required/>
-        <Input autoComplete="current-password" variant="bordered" label="Password" type="password" name="password" placeholder="Password" required/>
+        <Input autoComplete="username" variant="bordered" label="Username" type="text" name="username" placeholder="Username" isRequired required/>
+        <Input autoComplete="current-password" variant="bordered" label="Password" type="password" name="password" placeholder="Password" isRequired required/>
         <p aria-live="polite" className="text-sm text-red-500" hidden={!state.message}>{state?.message}</p>
 
         <Spacer y={2} />

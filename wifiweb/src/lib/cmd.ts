@@ -27,9 +27,8 @@ export async function runTerminalCommand(command: string) {
   return new Promise<string>((resolve, reject) => {
 
 
-    const caller = new Error().stack?.split("\n")[4].replace(/.*\/\/\/\(rsc\)\//g,"").replace(/:.*/g,"")
     
-    console.log(`[CMD ${caller}] Running command: ${command}`);
+    console.log(`[CMD] Running command: ${command}`);
     exec(command, (error, stdout, stderr) => {
       if (error) {
         reject(error);
