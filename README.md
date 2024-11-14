@@ -43,25 +43,23 @@
   - [x] Sometimes a glitch can happen where the camera is told to go to sleep but at the client at the same time tries to send a keep alive message, crashing the program because two messages are being sent at once
 - [ ] Raspberry PI
   - [ ] Create services that launch the car and cam client everytime the PI starts, to allow for fast initialization
-  - [ ] How do we quickly configure new Wi-Fis?
-    - [ ] Configure phone hotspots before-hand which the RPI will connect to if it doesn't find any other networks?
-    - [ ] Set a static IP for RPI when connected to these networks
-      - [ ] Calculated on the fly when connected to the Wi-Fi network
-        - [ ] TypeScript backend
-        - [ ] When connected to a known hotspot network:
-          - [ ] Calculate the IP range (by using the subnet mask)
-          - [ ] Find hotspot's source's IP (usually the first IP like a router)
-          - [ ] Use the next IP address
-          - [ ] Set the static IP on the RPI via ``nmcli``:
+  - [x] How do we quickly configure new Wi-Fis?
+    - [x] Configure phone hotspots before-hand which the RPI will connect to if it doesn't find any other networks?
+    - [x] Set a static IP for RPI when connected to these networks
+      - [x] Calculated on the fly when connected to the Wi-Fi network
+        - [x] TypeScript backend
+        - [x] When connected to a known hotspot network:
+          - [x] Calculate the IP range (by using the subnet mask)
+          - [x] Find hotspot's source's IP (usually the first IP like a router)
+          - [x] Use the next IP address
+          - [x] Set the static IP on the RPI via ``nmcli``:
             - ``sudo nmcli c mod <connection-name> ipv4.addresses <address>/<sub-mask-bin> ipv4.method manual``
-    - [ ] Create website to quickly access and configure Wi-Fi networks, which run on the PI.
+    - [x] Create website to quickly access and configure Wi-Fi networks, which run on the PI.
       - [x] TypeScript backend
       - [x] Easy and Quick UI
-        - [ ] Use ``wpa-cli`` or ``nmcli`` (terminal) with a script to set the network information
+        - [x] Use ``wpa-cli`` or ``nmcli`` (terminal) with a script to set the network information
     - [x] Make camera connect to the same Wi-Fi as the RPI
       - [x] Do this by getting the SSID and passkey from the RPI, and sending it to the camera during "connectToWiFi"
-- ~~[ ] Add a way to check how much battery the powerbank has?~~
-  - ~~How?~~
 - [x] Add alert on control website when detected that the car has low battery
   - [x] Falls below 20%
 - [x] Add alert on control website when detected that the cam has low battery
