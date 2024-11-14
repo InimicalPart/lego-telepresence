@@ -1,5 +1,4 @@
 interface WiFiWebGlobal extends NodeJS.Global {
-    hostname: string,
     interfaces: {
         interface: string,
         via: string,
@@ -32,5 +31,9 @@ interface WiFiWebGlobal extends NodeJS.Global {
         interface: string,
         connected: boolean
     }[],
-    currentConnection: WiFiWebGlobal["connections"][0] | null
+    currentConnection: WiFiWebGlobal["connections"][0] | null,
+    system: {
+        startedAt: Date,
+        hostname: string
+    }
 }

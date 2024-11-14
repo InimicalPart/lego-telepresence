@@ -27,21 +27,39 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
 
     const [changingPassword, setChangingPassword] = useState<boolean>(false);
     const [resettingPassword, setResettingPassword] = useState<boolean>(false);
+    const [deletingUser, setDeletingUser] = useState<boolean>(false);
 
 
     const [selectedUser, setSelectedUser] = useState<any>(null);
 
     useEffect(()=>{
-        fetch("/api/v1/user/get").then(async (res)=>{
+
+        function onMessage(event: any) {
+            if (event.detail.type === "refresh") {
+                setUsers(null);
+                fetch("/api/v1/users").then(async (res)=>{
+                    const data = await res.json();
+                    setUsers(data);
+                })
+            }
+        }
+
+        window.addEventListener("WW-UsersTable", onMessage);
+
+        fetch("/api/v1/users").then(async (res)=>{
             const data = await res.json();
             setUsers(data);
         })
+
+        return () => {
+            window.removeEventListener("WW-UsersTable", onMessage);
+        }
     }, [])
 
     function onResetPasswordSubmit(e: any) {
         e.preventDefault();
         setResettingPassword(true);
-        fetch(`/api/v1/user/${e.target.uuid.value}/password`, {
+        fetch(`/api/v1/users/${e.target.uuid.value}`, {
             method: "PATCH",
         }).then(async (res)=>{
             const data = await res.json();
@@ -63,10 +81,44 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
 
     }
 
+    function onDeleteUserSubmit(e: any) {
+        e.preventDefault();
+        setDeletingUser(true);
+        fetch(`/api/v1/users/${e.target.uuid.value}`, {
+            method: "DELETE",
+        }).then(async (res)=>{
+            const data = await res.json();
+            if (res.status != 200) throw new Error(data.message ?? data.error);
+            if (!data.error) {
+                setDeletingUser(false);
+                toast.success("User Deleted", {
+                    duration:5000
+                });
+                window.dispatchEvent(new CustomEvent("WW-UsersTable", {
+                    detail: {
+                        type: "refresh"
+                    }
+                }));
+            } else {
+                toast.error("An error occurred", {
+                    description: data.message ?? data.error,
+                    duration:5000
+                });
+                setDeletingUser(false);
+            }
+        }).catch((e)=>{
+            toast.error("An error occurred", {
+                description: e.message,
+                duration:5000
+            });
+            setDeletingUser(false);
+        })
+    }
+
     function onChangePasswordSubmit(e: any) {
         e.preventDefault();
         setChangingPassword(true);
-        fetch("/api/v1/user/me/password", {
+        fetch("/api/v1/users/@me", {
             method: "PATCH",
             body: new FormData(e.target)
         }).then(async (res)=>{
@@ -97,8 +149,6 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                 }
             }
         })
-
-
     }
 
     const renderCell = useCallback((user:{
@@ -146,9 +196,12 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                     </button>
                 </Tooltip>
                 <Tooltip showArrow content={user.username == currentUser ? "You cannot delete yourself.": "Delete user"}>
-                    <button disabled={user.username == currentUser} className={`text-lg text-danger ${user.username == currentUser ? "cursor-not-allowed" : "active:opacity-50"}`} >
-                        <DeleteUserIcon style={{opacity: user.username == currentUser ? 0.5 : 1}}/>
-                    </button>
+                    <form onSubmit={onDeleteUserSubmit} target="theTank">
+                        <input type="hidden" name="uuid" value={user.uuid} />
+                            <button type="submit" disabled={user.username == currentUser || !!deletingUser} className={`text-lg text-danger ${user.username == currentUser || !!deletingUser ? "cursor-not-allowed" : "active:opacity-50"}`} >
+                                <DeleteUserIcon style={{opacity: user.username == currentUser || !!deletingUser ? 0.5 : 1}}/>
+                            </button>
+                        </form>
                 </Tooltip>
               </div>
             );
@@ -203,7 +256,7 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                             <div className="flex flex-col gap-2">
                                 <span><b>UUID:</b> {selectedUser.uuid}</span>
                                 <span><b>Username:</b> {selectedUser.username}</span>
-                                <span><b>Privileges:</b> <div className="inline-flex gap-1 flex-wrap">{
+                                <span><b>Privileges:</b> {!selectedUser.privileges ? "NONE" : <div className="inline-flex gap-1 flex-wrap">{
                                     new UserPrivileges(selectedUser.privileges).toStringArray().map((privilege, i) => (
                                         <Tooltip content={<div className="max-w-[400px]">
                                             <Chip key={i} color={privilege == "ROOT" ? "danger" : "primary"} variant="flat" size="md">
@@ -219,7 +272,7 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                                             </Chip>
                                         </Tooltip>
                                     ))
-                                }</div>
+                                }</div>}
                                 </span>
                                 <span className="flex-row flex gap-1"><b>Created at:</b>
                                     <Tooltip content={new Date(selectedUser.createdAt).toString()}>

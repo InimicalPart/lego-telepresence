@@ -24,6 +24,8 @@ import bcrypt from "bcrypt";
 import { readFileSync } from "fs";
 import UserPrivileges from './privileges';
 import { writeFile } from 'fs/promises';
+import * as uuid from 'uuid';
+
 
 const users: {
     uuid: string,
@@ -148,6 +150,11 @@ export const getPrivileges = (user: string) => {
 export async function getUserByUUID(uuid: string) {
     return users.find(u => u.uuid === uuid) ?? null;
 }
+
+export async function getUUIDbyUser(username: string) {
+    return users.find(u => u.username === username)?.uuid ?? null;
+}
+
 export async function generatePassword(length: number = 16) {
     const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$&";
     let pass = "";
@@ -155,4 +162,45 @@ export async function generatePassword(length: number = 16) {
         pass += chars[Math.floor(Math.random() * chars.length)];
     }
     return pass;
+}
+export async function createUser(username: string, password: string, privileges: number, createdBy: string) {
+    const user = {
+        uuid: await generateUUID(),
+        username,
+        password: await hashPassword(password),
+        createdAt: new Date().toISOString(),
+        createdBy,
+        privileges
+    }
+    users.push(user);
+    await saveUsersDB();
+    return user;
+}
+
+export async function deleteUserByUUID(uuid: string) {
+    const index = users.findIndex(u => u.uuid === uuid);
+    if (index === -1) return false;
+    users.splice(index, 1);
+    await saveUsersDB();
+    return true;
+}
+
+export async function deleteUserByUsername(username: string) {
+    const index = users.findIndex(u => u.username === username);
+    if (index === -1) return false;
+    users.splice(index, 1);
+    await saveUsersDB();
+    return true;
+}
+
+export async function UUIDTaken(uuid: string) {
+    return users.some(u => u.uuid === uuid);
+}
+
+export async function generateUUID() {
+    let UUID = uuid.v4();
+    while (await UUIDTaken(UUID)) {
+        UUID = uuid.v4(); 
+    }
+    return UUID;
 }

@@ -32,8 +32,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import UserPrivileges, { Privileges } from "@/lib/privileges";
 import { UsersTable } from "./usersTable";
 import { toast } from "sonner";
+import Users from "./users";
+import SystemInformation from "./sysinfo";
 
-export default function DashboardElements({user, privileges: userPrivs, connections, interfaces, hostname}:{user: string, privileges: UserPrivileges["privileges"], connections:WiFiWebGlobal["connections"], interfaces:WiFiWebGlobal["interfaces"], hostname: string}) {
+export default function DashboardElements({user, privileges: userPrivs, connections, interfaces, system}:{user: string, privileges: UserPrivileges["privileges"], connections:WiFiWebGlobal["connections"], interfaces:WiFiWebGlobal["interfaces"], system: WiFiWebGlobal["system"]}) {
 
 
     const {isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose, onOpenChange: onEditOpenChange} = useDisclosure();
@@ -220,39 +222,8 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
             <div className="flex flex-row gap-2">
                 <div className="flex flex-col gap-2">
 
-                <Card className="h-[29.75rem] w-[30rem] flex">
-                    <CardHeader className="flex flex-row justify-between items-center font-bold gap-2">
-                        <p className="!justify-self-center ml-2">System Information</p>
-                    </CardHeader>
-                    <ScrollArea style={{
-                        scrollbarColor: "red"
-                    }}
-                    >
-                        <CardBody className="flex gap-2">
-                            
-                        </CardBody>
-                    </ScrollArea>
-                </Card>
-                <Card className={`h-[29.75rem] w-[30rem] flex ${!privileges.has(Privileges.MANAGE_USERS) ? "hidden" : ""}`}>
-                    <CardHeader className="flex flex-row justify-between items-center font-bold gap-2">
-                        <p className="!justify-self-center ml-2">Users</p>
-                    </CardHeader>
-                    <CardBody>
-                    <ScrollArea>
-                        <UsersTable currentUser={user} />
-                    </ScrollArea>
-                    </CardBody>
-                    <CardFooter>
-                        <div className="flex flex-row gap-2 justify-center items-center w-full">
-                            <Button variant="flat" color="primary" className="w-full mx-5" onClick={()=>{
-                                toast.error("Woo!", {
-                                    description: "You click the thing I haven't implemented yet! 👏👏👏",
-                                    duration: 5000
-                                })
-                            }}>Create a new user</Button>
-                        </div>
-                    </CardFooter>
-                </Card>
+                    <SystemInformation system={system} />
+                    <Users user={user} privileges={privileges} />
                 </div>
                 
 
@@ -272,7 +243,7 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                     <Card key={_} className="min-h-fit py-2 dark:bg-neutral-800" onMouseOver={()=>setHoveredOverConnection(connection)} onMouseOut={()=>setHoveredOverConnection(null)}>
                                         <CardHeader className="py-0 flex items-center font-bold gap-2">
                                             {connection.connected && 
-                                                <Tooltip content={<p><b>{hostname}</b> is currently connected to this network.</p>} showArrow>
+                                                <Tooltip content={<p><b>{system.hostname}</b> is currently connected to this network.</p>} showArrow>
                                                     <div className="active-dot"/>
                                                 </Tooltip>
                                             }
@@ -345,13 +316,13 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                                     </form>
                                                     <form onSubmit={connectToOther.bind(null, ()=>{})} target="theTank">
                                                         <input type="hidden" hidden name="uuid" value={connection.uuid} />
-                                                        <Button color="primary" type="submit" variant="flat" className={connection.connected || interfaces.length > 1 ? "hidden" : ""} disabled={connectPending}>
-                                                                Connect
+                                                        <Button color="primary" type="submit" variant="flat" className={connection.connected || interfaces.length > 1 ? "hidden" : ""} isDisabled={connectPending}>
+                                                            Connect
                                                         </Button>
                                                     </form>
                                                     <Popover placement="bottom" showArrow offset={10} isOpen={popoverOpen} onOpenChange={setPopoverOpen} isDismissable={!connectPending}>
                                                         <PopoverTrigger>
-                                                            <Button color="primary" variant="flat" className={connection.connected || interfaces.length == 1 ? "hidden" : ""} disabled={connectPending} onClick={()=>{setConnectToInterface(null)}}>
+                                                            <Button color="primary" variant="flat" className={connection.connected || interfaces.length == 1 ? "hidden" : ""} isDisabled={connectPending} onClick={()=>{setConnectToInterface(null)}}>
                                                                 Connect
                                                             </Button>
                                                         </PopoverTrigger>
@@ -418,7 +389,7 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                 <>
                     <ModalHeader className="flex flex-col gap-1">Add Network Connection</ModalHeader>
                     <ModalBody>
-                        <p>Add a new network connection for <b>{hostname}</b></p>
+                        <p>Add a new network connection for <b>{system.hostname}</b></p>
                         <form className="flex flex-col gap-2" onSubmit={onCreateSubmit} target="theTank">
                             <Input required isRequired minLength={1} maxLength={32} name="ssid" label="SSID" variant="bordered" placeholder="MyCoolNetwork-1N1M1"></Input>
                             <Select required isRequired name="authtype" defaultSelectedKeys={["wpa-psk"]} label="Authentication Type" variant="bordered" value={createAuthType} onChange={(e)=>{setCreateAuthType(e.target.value as any)}}>
@@ -465,10 +436,10 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                             <Divider orientation="horizontal" />
                             <Spacer y={1.5} />
                             <div className="flex flex-row py-2 justify-end w-full">
-                                <Button color="danger" variant="light" onClick={onClose} disabled={deletePending || createPending || editPending}>
+                                <Button color="danger" variant="light" onClick={onClose} isDisabled={deletePending || createPending || editPending}>
                                     Cancel
                                 </Button>
-                                <Button color="primary" type="submit" disabled={deletePending || createPending || editPending}>
+                                <Button color="primary" type="submit" isDisabled={deletePending || createPending || editPending}>
                                     {createPending ? "Adding..." : "Add"}
                                 </Button>
                             </div>
@@ -484,7 +455,7 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                 return <>
                     <ModalHeader className="flex flex-col gap-1">Editing '{selectedConnection?.name}'</ModalHeader>
                     <ModalBody>
-                        <p>Edit a new network connection for <b>{hostname}</b></p>
+                        <p>Edit a new network connection for <b>{system.hostname}</b></p>
                         <form className="flex flex-col gap-2" onSubmit={onEditSubmit} target="theTank">
                             <input type="hidden" hidden name="uuid" value={selectedConnection?.uuid} />
                             <Input required isRequired minLength={1} maxLength={32} name="ssid" label="SSID" variant="bordered" placeholder="MyCoolNetwork-1N1M1" defaultValue={selectedConnection?.name}></Input>
@@ -536,12 +507,12 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                             <Spacer y={1.5} />
                             <Divider orientation="horizontal" />
                             <Spacer y={1.5} />
-                            <p hidden={!selectedConnection?.connected} className="text-gray-400 text-center font-semibold text-sm"><b>{hostname}</b> will have to reconnect to the Wi-Fi network to apply the changes.<br/>You might lose connection temporarily.</p>
+                            <p hidden={!selectedConnection?.connected} className="text-gray-400 text-center font-semibold text-sm"><b>{system.hostname}</b> will have to reconnect to the Wi-Fi network to apply the changes.<br/>You might lose connection temporarily.</p>
                             <div className="flex flex-row py-2 justify-end w-full">
-                                <Button color="danger" variant="light" onClick={onClose} disabled={deletePending || createPending || editPending}>
+                                <Button color="danger" variant="light" onClick={onClose} isDisabled={deletePending || createPending || editPending}>
                                     Cancel
                                 </Button>
-                                <Button color="primary" type="submit" disabled={deletePending || createPending || editPending}>
+                                <Button color="primary" type="submit" isDisabled={deletePending || createPending || editPending}>
                                     {editPending ? "Editing..." : "Edit"}
                                 </Button>
                             </div>

@@ -4,6 +4,10 @@ export enum Privileges {
     MANAGE_NETWORKS = 1 << 2, // 4
 }
 
+export enum PrivilegePresets {
+    ALL = Object.keys(Privileges).filter(k => typeof Privileges[k as any] === "number").reduce((acc, k) => acc | Privileges[k as keyof typeof Privileges], 0),
+}
+
 export const Descriptions = {
     [Privileges.ROOT]: <>
         A user with the <b>root</b> privilege can be described as the highest authority figure in a structured system or environment, holding the ultimate responsibility and power to manage, control, and oversee every aspect of that system. Those individuals has unrestricted access to all resources, decisions, and actions within the domain, ensuring that everything operates smoothly and efficiently. However, with this unparalleled control comes the need for great care, as any mistake or misuse can have far-reaching consequences.<br/><br/><b>
@@ -18,13 +22,13 @@ export const Descriptions = {
     </>,
 }
 
-
-
 export const FriendlyNames = {
     [Privileges.ROOT]: "ROOT",
     [Privileges.MANAGE_USERS]: "Manage Users",
     [Privileges.MANAGE_NETWORKS]: "Manage Networks",
 }
+
+
 
 export default class UserPrivileges {
     private privileges = 0
