@@ -67,8 +67,9 @@ export async function getConnections() {
 
 export async function getNetworks() {
 
+
     //! Get the hostname of the server
-    global.hostname = await cmd.runTerminalCommand("hostname")
+    global.system.hostname = await cmd.runTerminalCommand("hostname")
 
     //! Detect WiFi interface(s)
     global.interfaces = await cmd.getNetworkHardware()

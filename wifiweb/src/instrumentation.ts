@@ -25,7 +25,18 @@ declare const global: WiFiWebGlobal
 
 export async function register(){
     if (process.env.NEXT_RUNTIME === "nodejs") {
+        const os = await import("os")
+
+        if (!global.system) {
+            global.system = {
+                startedAt: new Date(Date.now() - (os.uptime()*1000)),
+                hostname: ""
+            }
+        }
+
         const networks = await import("./lib/networks")
         await networks.getNetworks()
+
+
     }
 }

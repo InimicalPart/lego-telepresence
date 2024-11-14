@@ -29,6 +29,7 @@ import { cookies } from "next/headers";
 import { getPrivileges, getUsernameFromJWT, getUserPassHash, isDefaultPassword } from "@/lib/credentialManager";
 import UserPrivileges, { Privileges } from "@/lib/privileges";
 import DefaultPasswordAlert from "@/components/defaultPasswordAlert";
+import { Link } from "@nextui-org/react";
 
 export default async function Home() {
 
@@ -36,7 +37,7 @@ export default async function Home() {
     const res = await JWTCheck();
     if (res.success !== true) return res;
 
-    const user = await getUsernameFromJWT((await cookies())?.get("auth")?.value?.toString() as string | null, global.hostname)
+    const user = await getUsernameFromJWT((await cookies())?.get("auth")?.value?.toString() as string | null, global.system.hostname)
     const privileges = getPrivileges(user as string)
 
     await getConnections()
@@ -47,8 +48,18 @@ export default async function Home() {
 
     return (
         <>
+            <header className="flex w-full justify-center items-center text-center gap-2 mt-16 fixed select-none">
+                <p className="dark:text-white text-black text-3xl">WiFiWeb</p>
+                <img src="/wifiweb-white.png" alt="WiFiWeb Logo" className="w-10 h-10 dark:block hidden" />
+                <img src="/wifiweb-black.png" alt="WiFiWeb Logo" className="w-10 h-10 block dark:hidden" />
+            </header>
             <DefaultPasswordAlert isDefault={isDefaultPass}/> 
-            <DashboardElements user={user as string} privileges={privileges?.toMask() ?? 0} connections={global.connections} interfaces={global.interfaces} hostname={global.hostname}/>
+            <DashboardElements user={user as string} privileges={privileges?.toMask() ?? 0} connections={global.connections} interfaces={global.interfaces} system={global.system}/>
+            <footer className="fixed bottom-0 mb-3 w-full flex justify-center items-center text-center select-none text-neutral-400">
+                <p>
+                    © 2024 - <Link href={"https://inimicalpart.com"} isExternal className="text-neutral-200">InimicalPart</Link> - All rights reserved.
+                </p>
+            </footer>
         </>
     );
 }

@@ -43,7 +43,7 @@ export default function LogInForm({onLogIn}:{
         <p aria-live="polite" className="text-sm text-red-500" hidden={!state.message}>{state?.message}</p>
 
         <Spacer y={2} />
-        <Button type="submit" className="w-60" disabled={pending}>{pending ? "Logging in..." : "Log in"}</Button>
+        <Button type="submit" className="w-60" isDisabled={pending}>{pending ? "Logging in..." : "Log in"}</Button>
     </form>
     );
 }

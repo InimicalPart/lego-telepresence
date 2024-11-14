@@ -29,7 +29,7 @@ export async function JWTCheck(noRedirect: boolean = false, requiredPrivileges: 
     const authCookie = (await cookies())?.get("auth");
 
     if (authCookie) {
-        const verifyResult = await verifyJWT(authCookie.value, global.hostname as any);
+        const verifyResult = await verifyJWT(authCookie.value, global.system.hostname as any);
 
         const isValid = verifyResult !== false;
 
