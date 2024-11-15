@@ -1,0 +1,28 @@
+#! This is a systemd service file for the Raspberry Pi runnning the MM (Middleman) server
+#! It is used to start WiFiWeb on boot and restart it if it crashes
+#! This file should be uploaded as /lib/systemd/system/wifiweb.service
+#! 
+#! chmod 644 /lib/systemd/system/wifiweb.service
+
+[Unit]
+Description=WiFiWeb - The Way to Edit Network Connections
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=root
+
+WorkingDirectory=/opt/wifiweb
+Restart=always
+Type=simple
+ExecStart=/bin/bash -c "sudo -u lowpriv $(which npx) next start --hostname 0.0.0.0 --port 80"
+# This searches for processes listening on port 80, grabs their PIDs, and kills them with SIGINT
+ExecStop=/bin/bash -c "for pid in $(/usr/bin/lsof -i :80 | grep -E 'TCP .*:(http) \(LISTEN\)' | awk '{ print $2 }'); do kill -s SIGINT $pid; done"
+Environment=
+StartLimitIntervalSec=1d
+StartLimitBurst=50
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
