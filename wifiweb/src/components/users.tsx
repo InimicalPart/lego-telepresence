@@ -36,9 +36,7 @@ export default function Users({
 
         form.set("privileges", prives.toString())
 
-        console.log(form)
-
-        fetch("/api/v1/user", {
+        fetch("/api/v1/users", {
             method: "POST",
             body: form
         }).then(async (res) => {

@@ -27,8 +27,14 @@ import { SignJWT, jwtVerify } from "jose";
 import { JWTFromCreds, verifyCreds, verifyJWT } from "@/lib/credentialManager";
 import { redirect } from "next/navigation";
 
+type SearchParamProps = {
+    searchParams: Record<string, string> | null | undefined
+}
+
+
 import { z } from 'zod'
 import ClearAlerts from "@/components/clearAlerts";
+import LogOut from "@/components/logout";
  
 const schema = z.object({
     username: z.string({
@@ -40,13 +46,25 @@ const schema = z.object({
 })
  
 
-export default async function LoginPage() {
+export default async function LoginPage({
+    searchParams
+}:SearchParamProps) {
+    let logOut = (await searchParams)?.logout === "true"
 
+    async function logOutAction(){
+        "use server"
+        if (logOut) {
+            (await cookies()).delete("auth");
+            return redirect("/login")
+        }
+    }
 
     const authCookie = (await cookies())?.get("auth");
     const hostname = await runTerminalCommand("hostname");
 
-    if (authCookie) {
+
+
+    if (authCookie && !logOut) {
         const verifyResult = await verifyJWT(authCookie.value, hostname);
 
         const isValid = verifyResult !== false;
@@ -97,6 +115,7 @@ export default async function LoginPage() {
     return (
         <div className="flex w-[100dvw] h-[100dvh] justify-center items-center">
             <ClearAlerts />
+            {logOut ? <LogOut action={logOutAction}/> : null}
             <Card >
                 <CardHeader className="flex justify-center items-center">
                     <p>Log In to <b>{hostname}</b></p>

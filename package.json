@@ -12,5 +12,8 @@
   },
   "keywords": [],
   "author": "Inimi",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "node-gyp": "^10.2.0"
+  }
 }

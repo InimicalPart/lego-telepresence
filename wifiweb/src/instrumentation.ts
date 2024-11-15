@@ -23,6 +23,7 @@
 declare const global: WiFiWebGlobal
 
 
+
 export async function register(){
     if (process.env.NEXT_RUNTIME === "nodejs") {
         const os = await import("os")
@@ -33,10 +34,24 @@ export async function register(){
                 hostname: ""
             }
         }
-
+        global.isSystemd = !!process.env.INVOCATION_ID?.trim()
         const networks = await import("./lib/networks")
+        const cmd = await import("./lib/cmd")
+
+        if (global.isSystemd) {
+            // check if lshw exists
+            let lshwExists = await cmd.commandExists("lshw")
+            if (!lshwExists) {
+                console.warn("lshw not found, will download and install it")
+                await cmd.runTerminalCommand("sudo apt-get install lshw -y").catch(() => {
+                    console.error("Failed to install lshw!")
+                    process.exit(1)
+                }).then(() => {
+                    console.log("lshw installed")
+                })
+            }
+        }
+
         await networks.getNetworks()
-
-
     }
 }

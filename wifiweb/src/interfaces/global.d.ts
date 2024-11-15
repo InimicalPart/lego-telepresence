@@ -35,5 +35,6 @@ interface WiFiWebGlobal extends NodeJS.Global {
     system: {
         startedAt: Date,
         hostname: string
-    }
+    },
+    isSystemd: boolean
 }
