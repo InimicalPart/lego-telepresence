@@ -36,14 +36,11 @@ then
     fi
 fi
 
-echo $SCRIPT_DIRECTORY
 ROOT_DIR=`readlink -f "$SCRIPT_DIRECTORY/../"`
-echo "[WIFIWEB] Uploading WiFiWeb on $WIFIWEB_UPLOAD_HOST"
 source "$SCRIPT_DIRECTORY/scripts/wifiweb-upload.sh" $ROOT_DIR
-echo "[WIFIWEB] Uploaded WiFiWeb to $WIFIWEB_UPLOAD_DIR on $WIFIWEB_UPLOAD_HOST"
 source "$SCRIPT_DIRECTORY/scripts/wifiweb-setup.sh" $SCRIPT_DIRECTORY
 
-
+echo "[WIFIWEB] Done"
 
 
 

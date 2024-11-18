@@ -8,19 +8,16 @@
 Description=WiFiWeb - The Way to Edit Network Connections
 After=network-online.target
 Wants=network-online.target
+StartLimitBurst=50
+StartLimitIntervalSec=1d
 
 [Service]
 User=root
-
 WorkingDirectory=/opt/wifiweb
 Restart=always
 Type=simple
 ExecStart=/bin/bash -c "sudo -u lowpriv $(which npx) next start --hostname 0.0.0.0 --port 80"
-# This searches for processes listening on port 80, grabs their PIDs, and kills them with SIGINT
-ExecStop=/bin/bash -c "for pid in $(/usr/bin/lsof -i :80 | grep -E 'TCP .*:(http) \(LISTEN\)' | awk '{ print $2 }'); do kill -s SIGINT $pid; done"
-Environment=
-StartLimitIntervalSec=1d
-StartLimitBurst=50
+ExecStop=/bin/bash -c "for pid in $(/usr/bin/lsof -i :80 | grep -E 'TCP .*:(http) \\(LISTEN\\)' | awk '{ print $2 }'); do kill -s SIGINT $pid; done"
 KillMode=mixed
 KillSignal=SIGTERM
 
