@@ -101,7 +101,7 @@ export default function HeaderAlert() {
                 <h1 className={`relative ${getLuminance(color) < 128 ? "text-white" : "text-black"} z-10`}>{title}</h1>
             </div>
             <div className={`absolute h-full w-full flex items-center justify-end right-2 header-text ${!showAlert ? "hide" : ""} ${!title ? "hidden" : ""}`}>
-                <button onClick={onClose} disabled={!showAlert} className="z-10">
+                <button onClick={onClose} disabled={!showAlert} className="z-10 flex items-center pr-5">
                     <XMarkIcon size={16} className={`absolute ${getLuminance(color) < 128 ? "text-white" : "text-black"}`}/>
                 </button>
             </div>
