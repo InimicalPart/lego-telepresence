@@ -47,7 +47,7 @@
     - [ ] Configuration dump of ``nmcli -t -c no c show <name>``?
     - [ ] My own?
   - [ ] Add functionality to add a connection based on the Wi-Fis around the server
-  - [ ] \(BUG): WiFiWeb will reset all static IP, DNS and gateway configurations when manually asking WiFiWeb to connect to a network
+  - [x] \(BUG): WiFiWeb will reset all static IP, DNS and gateway configurations when manually asking WiFiWeb to connect to a network
 - [ ] Raspberry PI
   - [ ] Create services that launch the car and cam client everytime the PI starts, to allow for fast initialization
   - [x] How do we quickly configure new Wi-Fis?
