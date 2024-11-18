@@ -30,10 +30,10 @@ const initialState = {
   }
 
 export default function LogInForm({onLogIn}:{
-    onLogIn: (_:any, form: FormData) => Promise<{ message: string; }>
+    onLogIn: (_:typeof initialState, form: FormData) => Promise<{ message: string; }>
 }) {
 
-    const [state, submitFormAction] = useActionState(onLogIn as any, initialState)    
+    const [state, submitFormAction] = useActionState(onLogIn, initialState)    
     const { pending } = useFormStatus()
 
     return (

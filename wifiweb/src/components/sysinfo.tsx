@@ -1,7 +1,6 @@
 "use client"
 
 import { Card, CardHeader, CardBody } from "@nextui-org/react"
-import { ScrollArea } from "@radix-ui/react-scroll-area"
 import prettyMilliseconds from "pretty-ms"
 import { useEffect, useState } from "react"
 
@@ -13,8 +12,8 @@ export default function SystemInformation({system}:{system: {startedAt: Date, ho
     useEffect(() => {
 
         const uptimeInterval = setInterval(() => {
-            document.visibilityState === "visible" &&
-            setUptime(prettyMilliseconds(Date.now() - system.startedAt.getTime(), {keepDecimalsOnWholeSeconds: true}))
+            if (document.visibilityState === "visible")
+                setUptime(prettyMilliseconds(Date.now() - system.startedAt.getTime(), {keepDecimalsOnWholeSeconds: true}))
         }, 100);
 
 

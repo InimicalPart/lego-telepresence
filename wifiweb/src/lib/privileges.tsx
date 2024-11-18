@@ -5,7 +5,7 @@ export enum Privileges {
 }
 
 export enum PrivilegePresets {
-    ALL = Object.keys(Privileges).filter(k => typeof Privileges[k as any] === "number").reduce((acc, k) => acc | Privileges[k as keyof typeof Privileges], 0),
+    ALL = Object.keys(Privileges).filter(k => typeof Privileges[k as keyof typeof Privileges] === "number").reduce((acc, k) => acc | Privileges[k as keyof typeof Privileges], 0),
 }
 
 export const Descriptions = {
@@ -56,8 +56,8 @@ export default class UserPrivileges {
     }
 
     public toStringArray() {
-        const privs = Object.keys(Privileges).filter(k => typeof Privileges[k as any] === "number")
-        let ret = []
+        const privs = Object.keys(Privileges).filter(k => typeof Privileges[k as keyof typeof Privileges] === "number")
+        const ret = []
         for (const priv of privs) {
             if (this.has(Privileges[priv as keyof typeof Privileges], false)) {
                 ret.push(priv)

@@ -27,9 +27,9 @@ declare const global: WiFiWebGlobal
 import { getConnections, getCurrentConnection } from "../../lib/networks";
 import { cookies } from "next/headers";
 import { getPrivileges, getUsernameFromJWT, getUserPassHash, isDefaultPassword } from "@/lib/credentialManager";
-import UserPrivileges, { Privileges } from "@/lib/privileges";
 import DefaultPasswordAlert from "@/components/defaultPasswordAlert";
 import { Link } from "@nextui-org/react";
+import Image from "next/image";
 
 export default async function Home() {
 
@@ -50,8 +50,8 @@ export default async function Home() {
         <>
             <header className="flex w-full justify-center items-center text-center gap-2 mt-16 fixed select-none">
                 <p className="dark:text-white text-black text-3xl">WiFiWeb</p>
-                <img src="/wifiweb-white.png" alt="WiFiWeb Logo" className="w-10 h-10 dark:block hidden" />
-                <img src="/wifiweb-black.png" alt="WiFiWeb Logo" className="w-10 h-10 block dark:hidden" />
+                <Image src="/wifiweb-white.png" width={40} height={40} alt="WiFiWeb Logo" className="w-10 h-10 dark:block hidden" />
+                <Image src="/wifiweb-black.png" width={40} height={40} alt="WiFiWeb Logo" className="w-10 h-10 block dark:hidden" />
             </header>
             <DefaultPasswordAlert isDefault={isDefaultPass}/> 
             <DashboardElements user={user as string} privileges={privileges?.toMask() ?? 0} connections={global.connections} interfaces={global.interfaces} system={global.system}/>

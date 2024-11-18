@@ -10,11 +10,21 @@ export default function HeaderAlert() {
     const [color, setColor] = useState("#000000");
     const [showAlert, setShowAlert] = useState(true);
 
-    const [alertQueue, setAlertQueue] = useState<any[]>([]);
+    const [alertQueue, setAlertQueue] = useState<{
+        title: string;
+        color: string;
+    }[]>([]);
 
     useEffect(() => {
 
-        function onMessage(event: any) {
+        function onMessage(event: CustomEvent | {
+            detail: {
+                type: string;
+                title: string;
+                color: string;
+                force: boolean;
+            }
+        }) {
             const { type, title: internalTitle, color, force } = event.detail;
             if (type === "alert") {
                 if (showAlert && !force) {
@@ -29,7 +39,7 @@ export default function HeaderAlert() {
                     setShowAlert(false);
                 } else {
                     if (alertQueue.length > 0) {
-                        const { title:internalTitle2, color } = alertQueue.shift();
+                        const { title:internalTitle2, color } = alertQueue.shift() as typeof alertQueue[0];
                         setTitle(internalTitle2);
                         setColor(color);
                         setShowAlert(true);
@@ -40,24 +50,29 @@ export default function HeaderAlert() {
                 }
             } else if (type === "clearWithTitle") {
                 if (title === internalTitle) {
-                    onMessage({detail: {type: "hide", force}});
+                    onMessage({detail: {type: "hide", force} as {
+                        type: string;
+                        title: string;
+                        color: string;
+                        force: boolean;
+                    }});
                 } else if (alertQueue.length > 0) {
                     setAlertQueue(alertQueue.filter((item) => item.title !== internalTitle));
                 }
             }
         }
 
-        window.addEventListener("header-alert-message", onMessage);
+        window.addEventListener("header-alert-message", onMessage as EventListener);
 
         return () => {
-            window.removeEventListener("header-alert-message", onMessage);
+            window.removeEventListener("header-alert-message", onMessage as EventListener);
         }
     },[alertQueue, showAlert, title]);
 
 
     function onClose() {
         if (alertQueue.length > 0) {
-            const { title, color } = alertQueue.shift();
+            const { title, color } = alertQueue.shift() as typeof alertQueue[0];
             setTitle(title);
             setColor(color);
             setShowAlert(true);
@@ -68,13 +83,13 @@ export default function HeaderAlert() {
     }
 
     function getLuminance(hex: string) {
-        var c = hex.startsWith("#") ? hex.substring(1) : hex;
-        var rgb = parseInt(c, 16);
-        var r = (rgb >> 16) & 0xff;
-        var g = (rgb >>  8) & 0xff;
-        var b = (rgb >>  0) & 0xff;
+        const c = hex.startsWith("#") ? hex.substring(1) : hex;
+        const rgb = parseInt(c, 16);
+        const r = (rgb >> 16) & 0xff;
+        const g = (rgb >>  8) & 0xff;
+        const b = (rgb >>  0) & 0xff;
 
-        var luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
         return luma;
     }

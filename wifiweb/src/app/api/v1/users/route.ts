@@ -4,17 +4,19 @@ import UserPrivileges, { PrivilegePresets, Privileges } from "@/lib/privileges";
 import { NextRequest, NextResponse } from "next/server";
 
 
-export async function GET(req: NextRequest) {
+export async function GET() {
     const res = await JWTCheck(true, Privileges.MANAGE_USERS)
     if (res.success !== true) return NextResponse.json({message: "Unauthorized"}, {status: 401})
 
-    return NextResponse.json(getUsers((user)=>{
-        const {password, ...rest} = user;
+    return NextResponse.json(getUsers((user: { username: string; privileges: number; password?: string; uuid: string; createdAt: string; createdBy: string })=>{
+        const userCopy = {...user};
+
+        delete userCopy.password;
         return {manageable: 
             (!new UserPrivileges(user.privileges).has(Privileges.ROOT) &&
             new UserPrivileges(res.privileges as number).has(Privileges.MANAGE_USERS)) ||
             new UserPrivileges(res.privileges as number).has(Privileges.ROOT)
-        , ...rest};
+        , ...userCopy};
     }), {status: 200});
 }
 

@@ -20,7 +20,7 @@
  */
 
 import * as jose from 'jose'
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { readFileSync } from "fs";
 import UserPrivileges from './privileges';
 import { writeFile } from 'fs/promises';
@@ -84,11 +84,11 @@ export async function verifyJWT(jwt: string, hostname: string) {
             algorithms: ['HS256']
         })
         
-        return verifyCreds({
+        return await verifyCreds({
             username: payload.username as string,
             password: Buffer.from(payload.password as string, "base64").toString("utf-8")
         });
-    } catch (e) {
+    } catch {
         return false;
     }
 
@@ -136,7 +136,7 @@ export async function isDefaultPassword(hash: string) {
     return await bcrypt.compare(Buffer.from(Buffer.from(Uint8Array.from([7.6,7.7,12,10.7,12.7,12,10.9,11.9,13.2,13.2,7.5,12.6].map((_,__)=>(_*10)-__-15))).toString("utf-8").split('').reverse().join(''), "base64").toString("utf-8"), hash);
 }
 
-export function getUsers(mapFunction: (user: { username: string, privileges: number, password: string, uuid: string, createdAt: string, createdBy:string }) => any = (u) => u) {
+export function getUsers<T>(mapFunction: (user: { username: string, privileges: number, password: string, uuid: string, createdAt: string, createdBy:string }) => T = (u) => u as unknown as T) {
     return users.map(mapFunction);
 }
 

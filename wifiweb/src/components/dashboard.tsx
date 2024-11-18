@@ -21,17 +21,13 @@
 
 "use client";
 
-import { Card, CardHeader, CardBody, useDisclosure, Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Input, Select, SelectItem, Spacer, Checkbox, CheckboxGroup, Tooltip, Divider, Popover, PopoverContent, PopoverTrigger, CardFooter } from "@nextui-org/react";
-import { useActionState, useEffect, useState } from "react";
+import { Card, CardHeader, CardBody, useDisclosure, Button, Modal, ModalBody, ModalContent, ModalHeader, Input, Select, SelectItem, Spacer, Checkbox, CheckboxGroup, Tooltip, Divider, Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
+import { FormEvent, SetStateAction, useState } from "react";
 import { AddIcon, DeleteIcon, EditIcon, EyeFilledIcon, EyeSlashFilledIcon } from "./icons";
-import "@/styles/active-dot.css"
-import { useFormStatus } from "react-dom";
-import { useRouter } from "next/navigation";
+import "@/styles/active-dot.css";
 import { CIDRToSubnetMask } from "@/lib/subnetmask";
-import { ScrollArea } from "@/components/ui/scroll-area"
-import UserPrivileges, { Privileges } from "@/lib/privileges";
-import { UsersTable } from "./usersTable";
-import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import UserPrivileges from "@/lib/privileges";
 import Users from "./users";
 import SystemInformation from "./sysinfo";
 
@@ -41,18 +37,17 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
     const {isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose, onOpenChange: onEditOpenChange} = useDisclosure();
     const {isOpen: isAddOpen, onOpen: onAddOpen, onClose: onAddClose, onOpenChange: onAddOpenChange} = useDisclosure();
 
-    const [privileges, setPrivileges] = useState<UserPrivileges>(new UserPrivileges(userPrivs));
+    const [privileges] = useState<UserPrivileges>(new UserPrivileges(userPrivs));
 
     const [createPending, setCreatePending] = useState<boolean>(false);
     const [editPending, setEditPending] = useState<boolean>(false);
     const [deletePending, setDeletePending] = useState<boolean>(false);
     const [isVisible, setIsVisible] = useState<boolean>(false);
 
-    const [isPopoverOpen, setIsPopoverOpen] = useState<boolean>(false);
 
     const toggleVisibility = () => setIsVisible(!isVisible);
 
-    const [connectionss, setConnections] = useState<WiFiWebGlobal["connections"]>(connections.toSorted((con1: any, con2: any)=>{
+    const [connectionss, setConnections] = useState<WiFiWebGlobal["connections"]>(connections.toSorted((con1: WiFiWebGlobal["connections"][0], con2: WiFiWebGlobal["connections"][0])=>{
         if (con1.autoconnect.enabled && con2.autoconnect.enabled) {
             if (con1.autoconnect.priority === con2.autoconnect.priority) {
                 return con1.name.localeCompare(con2.name);
@@ -78,17 +73,28 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
     const [connectPending, setConnectPending] = useState<boolean>(false);
     const [disconnectPending, setDisconnectPending] = useState<boolean>(false);
 
-    async function onCreateSubmit(e:any){
+    const [popoverOpenList, setPopoverOpenList] = useState<{UUID:string, open: boolean}[]>(connectionss.map((con)=>{return {UUID: con.uuid, open: false}}));
+
+    function isPopoverOpen(UUID:string) {
+        return popoverOpenList.find((a)=>a.UUID === UUID)?.open;
+    }
+
+    function setPopoverOpen(UUID:string, open:boolean) {
+        setPopoverOpenList(popoverOpenList.map((a)=>a.UUID === UUID ? {UUID: a.UUID, open} : a));
+    }
+
+
+    async function onCreateSubmit(e: FormEvent<HTMLFormElement>){
         setCreatePending(true);
         e.preventDefault();
 
         fetch("/api/v1/network/create", {
             method: "POST",
-            body: new FormData(e.target),
-        }).then((res)=>{
-            new Promise<void>((resolve, reject)=>setTimeout(()=>resolve(), 1000)).then(()=>{
+            body: new FormData(e.target as HTMLFormElement),
+        }).then(()=>{
+            new Promise<void>((resolve)=>setTimeout(()=>resolve(), 1000)).then(()=>{
               fetch("/api/v1/network/get").then((res)=>res.json()).then((data)=>{
-                    setConnections(data.connections.toSorted((con1: any, con2: any)=>{
+                    setConnections(data.connections.toSorted((con1: WiFiWebGlobal["connections"][0], con2: WiFiWebGlobal["connections"][0])=>{
                         if (con1.autoconnect.enabled && con2.autoconnect.enabled) {
                             if (con1.autoconnect.priority === con2.autoconnect.priority) {
                                 return con1.name.localeCompare(con2.name);
@@ -104,18 +110,18 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
         })
     }
 
-    async function onEditSubmit(e:any){
+    async function onEditSubmit(e: FormEvent<HTMLFormElement>){
         setEditPending(true);
         e.preventDefault();
-        const uuid = e.target.uuid.value;
+        const uuid = (e.target as HTMLFormElement).uuid.value;
 
         fetch(`/api/v1/network/modify/${uuid}`, {
             method: "PATCH",
-            body: new FormData(e.target),
-        }).then((res)=>{
-            new Promise<void>((resolve, reject)=>setTimeout(()=>resolve(), 1000)).then(()=>{
+            body: new FormData(e.target as HTMLFormElement),
+        }).then(()=>{
+            new Promise<void>((resolve)=>setTimeout(()=>resolve(), 1000)).then(()=>{
               fetch("/api/v1/network/get").then((res)=>res.json()).then((data)=>{
-                    setConnections(data.connections.toSorted((con1: any, con2: any)=>{
+                    setConnections(data.connections.toSorted((con1: WiFiWebGlobal["connections"][0], con2: WiFiWebGlobal["connections"][0])=>{
                         if (con1.autoconnect.enabled && con2.autoconnect.enabled) {
                             if (con1.autoconnect.priority === con2.autoconnect.priority) {
                                 return con1.name.localeCompare(con2.name);
@@ -132,18 +138,18 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
     }
 
 
-    async function onDeleteSubmit(e:any){
+    async function onDeleteSubmit(e: FormEvent<HTMLFormElement>){
         setDeletePending(true);
         e.preventDefault();
 
-        const uuid = e.target.uuid.value;
+        const uuid = (e.target as HTMLFormElement).uuid.value;
 
         fetch(`/api/v1/network/delete/${uuid}` , {
             method: "DELETE",
-        }).then((res)=>{
-            new Promise<void>((resolve, reject)=>setTimeout(()=>resolve(), 1000)).then(()=>{
+        }).then(()=>{
+            new Promise<void>((resolve)=>setTimeout(()=>resolve(), 1000)).then(()=>{
               fetch("/api/v1/network/get").then((res)=>res.json()).then((data)=>{
-                    setConnections(data.connections.toSorted((con1: any, con2: any)=>{
+                    setConnections(data.connections.toSorted((con1: WiFiWebGlobal["connections"][0], con2: WiFiWebGlobal["connections"][0])=>{
                         if (con1.autoconnect.enabled && con2.autoconnect.enabled) {
                             if (con1.autoconnect.priority === con2.autoconnect.priority) {
                                 return con1.name.localeCompare(con2.name);
@@ -159,20 +165,20 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
 
     }
 
-    async function connectToOther(popoverControl: any, e:any){
+    async function connectToOther(popoverControl: (UUID: string, open: boolean) => void, e: FormEvent<HTMLFormElement>){
         console.log(e);
         setConnectPending(true);
         e.preventDefault();
 
-        const uuid = e.target.uuid.value;
+        const uuid = (e.target as HTMLFormElement).uuid.value;
 
         await fetch(`/api/v1/network/connect/${uuid}`, {
             method: "POST",
-            body: new FormData(e.target),
-        }).then((res)=>{
-            new Promise<void>((resolve, reject)=>setTimeout(()=>resolve(), 1000)).then(()=>{
+            body: new FormData(e.target as HTMLFormElement),
+        }).then(()=>{
+            new Promise<void>((resolve)=>setTimeout(()=>resolve(), 1000)).then(()=>{
               fetch("/api/v1/network/get").then((res)=>res.json()).then((data)=>{
-                    setConnections(data.connections.toSorted((con1: any, con2: any)=>{
+                    setConnections(data.connections.toSorted((con1: WiFiWebGlobal["connections"][0], con2: WiFiWebGlobal["connections"][0])=>{
                         if (con1.autoconnect.enabled && con2.autoconnect.enabled) {
                             if (con1.autoconnect.priority === con2.autoconnect.priority) {
                                 return con1.name.localeCompare(con2.name);
@@ -181,26 +187,26 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                         }
                         return con1.autoconnect.enabled ? -1 : 1;                        
                     }));
-                    popoverControl(false);
+                    popoverControl(uuid, false);
                     setConnectPending(false);
                 })
             })
         })
     }
 
-    async function disconnect(e:any){
+    async function disconnect(e: FormEvent<HTMLFormElement>){
         setDisconnectPending(true);
         e.preventDefault();
 
-        const uuid = e.target.uuid.value;
+        const uuid = (e.target as HTMLFormElement).uuid.value;
 
         await fetch(`/api/v1/network/disconnect/${uuid}`, {
             method: "POST",
-            body: new FormData(e.target),
-        }).then((res)=>{
-            new Promise<void>((resolve, reject)=>setTimeout(()=>resolve(), 1000)).then(()=>{
+            body: new FormData(e.target as HTMLFormElement),
+        }).then(()=>{
+            new Promise<void>((resolve)=>setTimeout(()=>resolve(), 1000)).then(()=>{
               fetch("/api/v1/network/get").then((res)=>res.json()).then((data)=>{
-                    setConnections(data.connections.toSorted((con1: any, con2: any)=>{
+                    setConnections(data.connections.toSorted((con1: WiFiWebGlobal["connections"][0], con2: WiFiWebGlobal["connections"][0])=>{
                         if (con1.autoconnect.enabled && con2.autoconnect.enabled) {
                             if (con1.autoconnect.priority === con2.autoconnect.priority) {
                                 return con1.name.localeCompare(con2.name);
@@ -236,11 +242,9 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                     </CardHeader>
                     <ScrollArea>
                         <CardBody className="flex gap-2">
-                            {...connectionss.map((connection: any, _:any) => {
-                                let [popoverOpen, setPopoverOpen] = interfaces.length > 1 && !connection.connected ? useState<boolean>(false) : [false, ()=>{}];
-
+                            {...connectionss.map((connection: WiFiWebGlobal["connections"][0], index:number) => {
                                 return (
-                                    <Card key={_} className="min-h-fit py-2 dark:bg-neutral-800" onMouseOver={()=>setHoveredOverConnection(connection)} onMouseOut={()=>setHoveredOverConnection(null)}>
+                                    <Card key={index} className="min-h-fit py-2 dark:bg-neutral-800" onMouseOver={()=>setHoveredOverConnection(connection)} onMouseOut={()=>setHoveredOverConnection(null)}>
                                         <CardHeader className="py-0 flex items-center font-bold gap-2">
                                             {connection.connected && 
                                                 <Tooltip content={<p><b>{system.hostname}</b> is currently connected to this network.</p>} showArrow>
@@ -265,7 +269,7 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                                         <div>
                                                             <p className="flex flex-wrap max-w-[400px] gap-1"><b>IPv4 Addresses:</b> {
                                                                 connection.additional["ipv4.addresses"]?.split(",")?.map((ip: string)=>ip.replace(/\/.*$/,"") + "/" + CIDRToSubnetMask(parseInt(ip.match(/\/(.*)$/)?.[1] || "32")))?.join(", ") ?? 
-                                                                (Object.keys(connection.additional).filter((key)=>key.match(/^IP4.ADDRESS/)).map((key)=>connection.additional[key].replace(/\/.*$/,"") + "/" + CIDRToSubnetMask(connection.additional[key].match(/\/(.*)$/)[1])).join(", ")
+                                                                (Object.keys(connection.additional).filter((key)=>key.match(/^IP4.ADDRESS/)).map((key)=>(connection?.additional?.[key]??"").replace(/\/.*$/,"") + "/" + CIDRToSubnetMask(parseInt((connection?.additional?.[key] ?? "").match(/\/(.*)$/)?.[1] ?? "") || 1)).join(", ")
                                                                 || "none")
                                                             }</p>
                                                             <p className="flex flex-wrap max-w-[400px] flex-row gap-x-1"><b>IPv4 Gateway:</b> {
@@ -274,14 +278,14 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                                             }</p>
                                                             <p className="flex flex-wrap max-w-[400px] flex-row gap-x-1"><b>IPv4 DNS:</b> {
                                                                 connection.additional["ipv4.dns"]?.split(",")?.join(", ") ?? 
-                                                                (Object.keys(connection.additional).filter((key)=>key.match(/^IP4.DNS/)).map((key)=>connection.additional[key]).join(", ")
+                                                                (Object.keys(connection.additional).filter((key)=>key.match(/^IP4.DNS/)).map((key)=>(connection?.additional?.[key]??"")).join(", ")
                                                                 || "none")
 
                                                             }</p>
                                                             <Spacer y={2} />
                                                             <p className="flex flex-wrap max-w-[400px] flex-row gap-x-1"><b>IPv6 Addresses:</b> {
                                                                 connection.additional["ipv6.addresses"]?.split(",")?.join(", ") ?? 
-                                                                (Object.keys(connection.additional).filter((key)=>key.match(/^IP6.ADDRESS/)).map((key)=>connection.additional[key]).join(", ")
+                                                                (Object.keys(connection.additional).filter((key)=>key.match(/^IP6.ADDRESS/)).map((key)=>(connection?.additional?.[key]??"")).join(", ")
                                                                 || "none")  
                                                             }</p>
                                                             <p className="flex flex-wrap max-w-[400px] flex-row gap-x-1"><b>IPv6 Gateway:</b> {
@@ -290,7 +294,7 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                                             }</p>
                                                             <p className="flex flex-wrap max-w-[400px] flex-row gap-x-1"><b>IPv6 DNS:</b> {
                                                                 connection.additional["ipv6.dns"]?.split(",")?.join(", ") ??
-                                                                (Object.keys(connection.additional).filter((key)=>key.match(/^IP6.DNS/)).map((key)=>connection.additional[key]).join(", ")
+                                                                (Object.keys(connection.additional).filter((key)=>key.match(/^IP6.DNS/)).map((key)=>(connection?.additional?.[key]??"")).join(", ")
                                                                 || "none")
                                                             }</p>
                                                             <Spacer y={2} />
@@ -320,7 +324,7 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                                             Connect
                                                         </Button>
                                                     </form>
-                                                    <Popover placement="bottom" showArrow offset={10} isOpen={popoverOpen} onOpenChange={setPopoverOpen} isDismissable={!connectPending}>
+                                                    <Popover placement="bottom" showArrow offset={10} isOpen={isPopoverOpen(connection.uuid)} onOpenChange={(e)=>setPopoverOpen(connection.uuid,e)} isDismissable={!connectPending}>
                                                         <PopoverTrigger>
                                                             <Button color="primary" variant="flat" className={connection.connected || interfaces.length == 1 ? "hidden" : ""} isDisabled={connectPending} onClick={()=>{setConnectToInterface(null)}}>
                                                                 Connect
@@ -336,9 +340,9 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                                                     <form onSubmit={connectToOther.bind(null, setPopoverOpen)} target="theTank">
                                                                         <input type="hidden" hidden name="uuid" value={connection.uuid} />
                                                                         <Select name="interface" label="Network Interface" variant="bordered" onChange={(e)=>setConnectToInterface(e.target.value as string)} required isRequired>
-                                                                            {...interfaces.map((netInterface: any, _:any) => {
+                                                                            {...interfaces.map((netInterface: WiFiWebGlobal["interfaces"][0]) => {
                                                                                 return <SelectItem value={netInterface.interface} key={netInterface.interface} textValue={`${netInterface.via}: ${netInterface.interface} (${netInterface.serial.toUpperCase()})`}>{netInterface.via}: <b>{netInterface.interface}</b> ({netInterface.serial.toUpperCase()})</SelectItem>
-                                                                            }) as any}
+                                                                            })}
                                                                         </Select>
                                                                         <Spacer hidden={connectToInterface == null || !connectionss.some(a=>a.interface == connectToInterface && a.connected)} y={2} />
                                                                         <p hidden={connectToInterface == null || !connectionss.some(a=>a.interface == connectToInterface && a.connected)} className="text-center text-yellow-500">
@@ -358,7 +362,7 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                                 <div hidden={hoveredOverConnection != connection && false} className="gap-2 flex">
                                                     <Tooltip content={<p>Edit this network connection</p>} showArrow>
                                                         <Button onClick={()=>{
-                                                            setEditAuthType(connection?.wifiSecurity?.toLowerCase() as any ?? "wpa-psk");
+                                                            setEditAuthType(connection?.wifiSecurity?.toLowerCase() as SetStateAction<"wpa-psk" | "wpa-eap" | "open"> ?? "wpa-psk");
                                                             setEditShowIPConf((!!connection?.static?.ips || !!connection?.static?.dns || !!connection?.static?.gateway) ? true : false);
                                                             setSelectedConnection(connection);
                                                             onEditOpen();
@@ -392,7 +396,7 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                         <p>Add a new network connection for <b>{system.hostname}</b></p>
                         <form className="flex flex-col gap-2" onSubmit={onCreateSubmit} target="theTank">
                             <Input required isRequired minLength={1} maxLength={32} name="ssid" label="SSID" variant="bordered" placeholder="MyCoolNetwork-1N1M1"></Input>
-                            <Select required isRequired name="authtype" defaultSelectedKeys={["wpa-psk"]} label="Authentication Type" variant="bordered" value={createAuthType} onChange={(e)=>{setCreateAuthType(e.target.value as any)}}>
+                            <Select required isRequired name="authtype" defaultSelectedKeys={["wpa-psk"]} label="Authentication Type" variant="bordered" value={createAuthType} onChange={(e)=>{setCreateAuthType(e.target.value as SetStateAction<"wpa-psk" | "wpa-eap" | "open">)}}>
                                 <SelectItem value={"open"} key="open">OPEN (none)</SelectItem>
                                 <SelectItem value={"wpa-psk"} key="wpa-psk">WPA (password)</SelectItem>
                                 <SelectItem value={"wpa-eap"} key="wpa-eap">WPA-EAP (username & password)</SelectItem>
@@ -427,8 +431,8 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                 {createShowIPConf && <Input required isRequired minLength={7} size="sm" name="static-gateway" label="Gateway Address" variant="bordered" placeholder="192.168.1.1"></Input>}
                                 {createShowIPConf && <Input required isRequired minLength={7} size="sm" name="static-dns-servers" label="Static DNS Servers (separate with commas)" variant="bordered" placeholder="1.1.1.1,1.0.0.1"></Input>}
                                 <Checkbox size="sm" name="autoconnect" value="autoconnect" onChange={(e)=>setCreateAutoconnect(e.target.checked)}>Automatically connect to this network when in range</Checkbox>
-                                {createAutoconnect && <Input required isRequired minLength={1} maxLength={7} size="sm" name="autoconnect-priority" label="Priority" variant="bordered" type="number" placeholder="0" defaultValue="0"></Input>}
-                                {createAutoconnect && <Input required isRequired minLength={1} maxLength={7} size="sm" name="autoconnect-retries" label="Retries (-1 to try forever)" variant="bordered" type="number" placeholder="-1" defaultValue="-1"></Input>}
+                                {createAutoconnect && <Input min={-999} max={999} required isRequired minLength={1} maxLength={3} size="sm" name="autoconnect-priority" label="Priority" variant="bordered" type="number" placeholder="0" defaultValue="0"></Input>}
+                                {createAutoconnect && <Input required isRequired minLength={1} maxLength={3} size="sm" name="autoconnect-retries" label="Retries (-1 to try forever)" variant="bordered" type="number" placeholder="-1" defaultValue="-1"></Input>}
                                 <Checkbox size="sm" name="hidden" value="hidden" >This network is hidden (not broadcasting its SSID)</Checkbox>
                         
                             </CheckboxGroup>
@@ -453,18 +457,18 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
             <ModalContent>
             {(onClose) => {
                 return <>
-                    <ModalHeader className="flex flex-col gap-1">Editing '{selectedConnection?.name}'</ModalHeader>
+                    <ModalHeader className="flex flex-col gap-1">Editing &apos;{selectedConnection?.name}&apos;</ModalHeader>
                     <ModalBody>
                         <p>Edit a new network connection for <b>{system.hostname}</b></p>
                         <form className="flex flex-col gap-2" onSubmit={onEditSubmit} target="theTank">
                             <input type="hidden" hidden name="uuid" value={selectedConnection?.uuid} />
                             <Input required isRequired minLength={1} maxLength={32} name="ssid" label="SSID" variant="bordered" placeholder="MyCoolNetwork-1N1M1" defaultValue={selectedConnection?.name}></Input>
-                            <Select required isRequired name="authtype" defaultSelectedKeys={[selectedConnection?.wifiSecurity.toLowerCase() ?? "wpa-psk"]} label="Authentication Type" variant="bordered" value={createAuthType} onChange={(e)=>{setCreateAuthType(e.target.value as any)}}>
+                            <Select required isRequired name="authtype" defaultSelectedKeys={[selectedConnection?.wifiSecurity.toLowerCase() ?? "wpa-psk"]} label="Authentication Type" variant="bordered" value={createAuthType} onChange={(e)=>{setEditAuthType(e.target.value as SetStateAction<"wpa-psk" | "wpa-eap" | "open">)}}>
                                 <SelectItem value={"open"} key="open">OPEN (none)</SelectItem>
                                 <SelectItem value={"wpa-psk"} key="wpa-psk">WPA (password)</SelectItem>
                                 <SelectItem value={"wpa-eap"} key="wpa-eap">WPA-EAP (username & password)</SelectItem>
                             </Select>
-                            {createAuthType === "wpa-psk" && <Input endContent={
+                            {editAuthType === "wpa-psk" && <Input endContent={
                                     <button className="focus:outline-none" type="button" onClick={toggleVisibility} aria-label="toggle password visibility">
                                         {isVisible ? (
                                             <EyeSlashFilledIcon className="text-2xl text-default-400 pointer-events-none" />
@@ -473,7 +477,7 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                         )}
                                         </button>
                                     } required isRequired name="password" minLength={8} maxLength={63}  defaultValue={selectedConnection?.credentials?.password} autoComplete="current-password" label="Password" variant="bordered" type={isVisible ? "text" : "password"} placeholder="inimiHasThePass"></Input>}
-                            {createAuthType === "wpa-eap" && <>
+                            {editAuthType === "wpa-eap" && <>
                                 <Input required isRequired name="username" minLength={1} defaultValue={selectedConnection?.credentials?.username} autoComplete="username" label="Username" variant="bordered" type="text" placeholder="inimi"></Input>
                                 <Input endContent={
                                     <button className="focus:outline-none" type="button" onClick={toggleVisibility} aria-label="toggle password visibility">
@@ -487,10 +491,17 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                             </>}
                             <Spacer y={2} />
                             <Select required isRequired name="interface" defaultSelectedKeys={interfaces.map(a=>a.interface).includes(selectedConnection?.interface as string) ? [selectedConnection?.interface as string] : ["any"]} label="Network Interface" variant="bordered">
-                                <SelectItem value={"any"} key="any">Any</SelectItem>
-                                {...interfaces.map((netInterface: any, _:any) => {
-                                    return <SelectItem value={netInterface.interface} key={netInterface.interface} textValue={`${netInterface.via}: ${netInterface.interface} (${netInterface.serial.toUpperCase()})`}>{netInterface.via}: <b>{netInterface.interface}</b> ({netInterface.serial.toUpperCase()})</SelectItem>
-                                }) as any}
+                                {
+                                    [
+                                        ...(()=>{
+                                            return [<SelectItem value="any" key="any">Any</SelectItem>]
+                                        })(),
+                                        ...interfaces.map((netInterface: WiFiWebGlobal["interfaces"][0]) => {
+                                            console.log(netInterface)
+                                            return <SelectItem value={netInterface.interface} key={netInterface.interface} textValue={`${netInterface.via}: ${netInterface.interface} (${netInterface.serial.toUpperCase()})`}>{netInterface.via}: <b>{netInterface.interface}</b> ({netInterface.serial.toUpperCase()})</SelectItem>
+                                        })
+                                    ]
+                                }
                             </Select>
                             <Spacer y={2} />
                             <CheckboxGroup size="sm"  name="settings" label="Settings" defaultValue={[...(editAutoconnect ? ["autoconnect"] : []), ...(editShowIPConf ? ["set-static"] : []), ...(selectedConnection?.hidden ? ["hidden"]:[])]}>
@@ -499,7 +510,7 @@ export default function DashboardElements({user, privileges: userPrivs, connecti
                                 {editShowIPConf && <Input required isRequired minLength={7} size="sm" name="static-gateway" label="Gateway Address" variant="bordered" placeholder="192.168.1.1" defaultValue={selectedConnection?.static?.gateway ?? ""}></Input>}
                                 {editShowIPConf && <Input required isRequired minLength={7} size="sm" name="static-dns-servers" label="Static DNS Servers (separate with commas)" variant="bordered" placeholder="1.1.1.1,1.0.0.1" defaultValue={selectedConnection?.static.dns?.join(",")}></Input>}
                                 <Checkbox size="sm" name="autoconnect" value="autoconnect" onChange={(e)=>setEditAutoconnect(e.target.checked)}>Automatically connect to this network when in range</Checkbox>
-                                {editAutoconnect && <Input required isRequired minLength={1} maxLength={7} size="sm" name="autoconnect-priority" label="Priority" variant="bordered" type="number" placeholder="0" defaultValue={selectedConnection?.autoconnect.priority.toString() ?? "0"}></Input>}
+                                {editAutoconnect && <Input required min={-999} max={999} isRequired minLength={1} maxLength={3} size="sm" name="autoconnect-priority" label="Priority" variant="bordered" type="number" placeholder="0" defaultValue={selectedConnection?.autoconnect?.priority.toString() ?? "0"}></Input>}
                                 {editAutoconnect && <Input required isRequired minLength={1} maxLength={7} size="sm" name="autoconnect-retries" label="Retries (-1 to try forever)" variant="bordered" type="number" placeholder="-1" defaultValue={selectedConnection?.autoconnect.retries.toString() ?? "-1"}></Input>}
                                 <Checkbox size="sm" name="hidden" value="hidden" >This network is hidden (not broadcasting its SSID)</Checkbox>
                         

@@ -39,15 +39,15 @@ export async function register(){
         const cmd = await import("./lib/cmd")
 
         if (global.isSystemd) {
-            // check if lshw exists
-            let lshwExists = await cmd.commandExists("lshw")
+            const lshwExists = await cmd.commandExists("lshw")
             if (!lshwExists) {
                 console.warn("lshw not found, will download and install it")
                 await cmd.runTerminalCommand("sudo apt-get install lshw -y").catch(() => {
                     console.error("Failed to install lshw!")
                     process.exit(1)
                 }).then(() => {
-                    console.log("lshw installed")
+                    console.log("lshw installed, forcing a restart")
+                    process.exit(10)
                 })
             }
         }

@@ -1,28 +1,35 @@
 "use client"
 
 import UserPrivileges, { Descriptions, FriendlyNames, Privileges } from "@/lib/privileges";
-import { Button, Chip, Divider, getKeyValue, Modal, Input, ModalBody, ModalContent, ModalFooter, ModalHeader, Skeleton, Spacer, Spinner, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, Tooltip, useDisclosure } from "@nextui-org/react";
-import { useCallback, useEffect, useState } from "react";
-import { DeleteUserIcon, EditUserIcon, EyeFilledIcon, EyeIcon, EyeSlashFilledIcon } from "./icons";
-import { toast } from "sonner"
+import { Button, Chip, Divider, Modal, Input, ModalBody, ModalContent, ModalFooter, ModalHeader, Spacer, Spinner, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, Tooltip, useDisclosure } from "@nextui-org/react";
+import { FormEvent, Key, useCallback, useEffect, useState } from "react";
+import { DeleteUserIcon, EditUserIcon, EyeFilledIcon, EyeSlashFilledIcon } from "./icons";
+import { toast } from "sonner";
 import { AlertPresets } from "@/lib/alertPresets";
 
-export function UsersTable( {currentUser}:{currentUser: any} ) {
+export function UsersTable( {currentUser}:{currentUser: string} ) {
 
-    const [users, setUsers] = useState<any[]|null>(null);
+    const [users, setUsers] = useState<{
+        manageable: boolean;
+        username: string;
+        privileges: number;
+        uuid: string;
+        createdAt: string;
+        createdBy: string;
+    }[]|null>(null);
     const {isOpen: isEditOpen, onClose: onCloseEdit, onOpen: onOpenEdit, onOpenChange: onOpenEditChange} = useDisclosure();
     const {isOpen: isChangePassOpen, onClose: onCloseChangePass, onOpen: onOpenChangePass, onOpenChange: onOpenChangePassChange} = useDisclosure();
-    const {isOpen: isResetPassOpen, onClose: onCloseResetPass, onOpen: onOpenResetPass, onOpenChange: onOpenResetPassChange} = useDisclosure();
+    const {isOpen: isResetPassOpen, onOpen: onOpenResetPass, onOpenChange: onOpenResetPassChange} = useDisclosure();
 
-    const [currentPass, setCurrentPass] = useState<any>(null);
+    const [currentPass, setCurrentPass] = useState<string>("");
     const [currentPassVisible, setCurrentPassVisible] = useState<boolean>(false);
-    const [currentPassError, setCurrentPassError] = useState<string|null>(null);
-    const [newPass, setNewPass] = useState<any>(null);
+    const [currentPassError, setCurrentPassError] = useState<string>("");
+    const [newPass, setNewPass] = useState<string>("");
     const [newPassVisible, setNewPassVisible] = useState<boolean>(false);
-    const [newPassError, setNewPassError] = useState<string|null>(null);
-    const [verifiedPass, setVerifiedPass] = useState<any>(null);
+    const [newPassError, setNewPassError] = useState<string>("");
+    const [verifiedPass, setVerifiedPass] = useState<string>("");
     const [verifiedPassVisible, setVerifiedPassVisible] = useState<boolean>(false);
-    const [verifiedPassError, setVerifiedPassError] = useState<string|null>(null);
+    const [verifiedPassError, setVerifiedPassError] = useState<string>("");
 
 
     const [changingPassword, setChangingPassword] = useState<boolean>(false);
@@ -30,11 +37,18 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
     const [deletingUser, setDeletingUser] = useState<boolean>(false);
 
 
-    const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [selectedUser, setSelectedUser] = useState<{
+        manageable: boolean;
+        username: string;
+        privileges: number;
+        uuid: string;
+        createdAt: string;
+        createdBy: string;
+    } | null>(null);
 
     useEffect(()=>{
 
-        function onMessage(event: any) {
+        function onMessage(event: CustomEvent) {
             if (event.detail.type === "refresh") {
                 setUsers(null);
                 fetch("/api/v1/users").then(async (res)=>{
@@ -44,7 +58,7 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
             }
         }
 
-        window.addEventListener("WW-UsersTable", onMessage);
+        window.addEventListener("WW-UsersTable", onMessage as EventListener);
 
         fetch("/api/v1/users").then(async (res)=>{
             const data = await res.json();
@@ -52,14 +66,14 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
         })
 
         return () => {
-            window.removeEventListener("WW-UsersTable", onMessage);
+            window.removeEventListener("WW-UsersTable", onMessage as EventListener);
         }
     }, [])
 
-    function onResetPasswordSubmit(e: any) {
+    function onResetPasswordSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setResettingPassword(true);
-        fetch(`/api/v1/users/${e.target.uuid.value}`, {
+        fetch(`/api/v1/users/${(e.target as HTMLFormElement).uuid.value}`, {
             method: "PATCH",
         }).then(async (res)=>{
             const data = await res.json();
@@ -81,10 +95,10 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
 
     }
 
-    function onDeleteUserSubmit(e: any) {
+    function onDeleteUserSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setDeletingUser(true);
-        fetch(`/api/v1/users/${e.target.uuid.value}`, {
+        fetch(`/api/v1/users/${(e.target as HTMLFormElement).uuid.value}`, {
             method: "DELETE",
         }).then(async (res)=>{
             const data = await res.json();
@@ -115,21 +129,21 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
         })
     }
 
-    function onChangePasswordSubmit(e: any) {
+    function onChangePasswordSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setChangingPassword(true);
         fetch("/api/v1/users/@me", {
             method: "PATCH",
-            body: new FormData(e.target)
+            body: new FormData(e.target as HTMLFormElement)
         }).then(async (res)=>{
             const data = await res.json();
             if (!data.error) {
-                setCurrentPass(null);
-                setNewPass(null);
-                setVerifiedPass(null);
-                setCurrentPassError(null);
-                setNewPassError(null);
-                setVerifiedPassError(null);
+                setCurrentPass("");
+                setNewPass("");
+                setVerifiedPass("");
+                setCurrentPassError("");
+                setNewPassError("");
+                setVerifiedPassError("");
                 setChangingPassword(false);
                 window.dispatchEvent(new CustomEvent("header-alert-message", {
                     detail: {
@@ -152,15 +166,17 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
     }
 
     const renderCell = useCallback((user:{
-        manageable: any;
-        username: string,
-        privileges: number,
-        uuid: string
-    }, columnKey: keyof typeof user) => {
+        manageable: boolean;
+        username: string;
+        privileges: number;
+        uuid: string;
+        createdAt: string;
+        createdBy: string;
+    }, columnKey: Key) => {
     
-        const cellValue = user[columnKey]
+        const cellValue = user[columnKey.toString() as keyof typeof user];
 
-        switch (columnKey as any) {
+        switch (columnKey.toString() as (keyof typeof user | "actions")) {
           case "username":
             return (
               <>{user.username}</>
@@ -208,7 +224,7 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
           default:
             return cellValue;
         }
-      },[currentUser]);
+      },[currentUser, deletingUser, onOpenEdit]);
 
 
     const columns = [
@@ -242,7 +258,7 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                     <TableBody items={users ?? []} loadingContent={<Spinner/>} isLoading={users==null||currentUser==null}>
                         {(item) => (
                             <TableRow key={item.uuid}>
-                                {(columnKey) => <TableCell>{renderCell(item, columnKey as any)}</TableCell>}
+                                {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
                             </TableRow>
                         )}
                 </TableBody>
@@ -251,13 +267,13 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                 <ModalContent>
                     {(onClose) => (
                         <>
-                        <ModalHeader className="font-normal"><p>Editing User: <b>{selectedUser.username}</b></p></ModalHeader>
+                        <ModalHeader className="font-normal"><p>Editing User: <b>{selectedUser?.username}</b></p></ModalHeader>
                         <ModalBody>
                             <div className="flex flex-col gap-2">
-                                <span><b>UUID:</b> {selectedUser.uuid}</span>
-                                <span><b>Username:</b> {selectedUser.username}</span>
-                                <span><b>Privileges:</b> {!selectedUser.privileges ? "NONE" : <div className="inline-flex gap-1 flex-wrap">{
-                                    new UserPrivileges(selectedUser.privileges).toStringArray().map((privilege, i) => (
+                                <span><b>UUID:</b> {selectedUser?.uuid}</span>
+                                <span><b>Username:</b> {selectedUser?.username}</span>
+                                <span><b>Privileges:</b> {!selectedUser?.privileges ? "NONE" : <div className="inline-flex gap-1 flex-wrap">{
+                                    new UserPrivileges(selectedUser?.privileges).toStringArray().map((privilege, i) => (
                                         <Tooltip content={<div className="max-w-[400px]">
                                             <Chip key={i} color={privilege == "ROOT" ? "danger" : "primary"} variant="flat" size="md">
                                                 {FriendlyNames[Privileges[privilege as keyof typeof Privileges]]}
@@ -275,27 +291,27 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                                 }</div>}
                                 </span>
                                 <span className="flex-row flex gap-1"><b>Created at:</b>
-                                    <Tooltip content={new Date(selectedUser.createdAt).toString()}>
-                                            {new Date(selectedUser.createdAt).toLocaleString()}
+                                    <Tooltip content={new Date(selectedUser?.createdAt as string).toString()}>
+                                            {new Date(selectedUser?.createdAt as string).toLocaleString()}
                                     </Tooltip>
                                 </span>
                                 <span className="flex-row flex gap-1"><b>Created by:</b>
-                                    <Tooltip showArrow hidden={selectedUser.createdBy !== "SYSTEM"} content={<div className="max-w-[400px]">
+                                    <Tooltip showArrow hidden={selectedUser?.createdBy !== "SYSTEM"} content={<div className="max-w-[400px]">
                                         <b className="text-medium">SYSTEM</b>
                                         <Spacer y={1}/>
                                         <Divider orientation="horizontal" />
                                         <Spacer y={1}/>
-                                        <p>The <b>SYSTEM</b> user is a "system-level-only" user that is created when the system is initialized. WiFiWeb uses the <b>SYSTEM</b> account to perform operations like a user.</p>
-                                    </div>}>{selectedUser.createdBy}</Tooltip>
+                                        <p>The <b>SYSTEM</b> user is a &quot;system-level-only&quot; user that is created when the system is initialized. WiFiWeb uses the <b>SYSTEM</b> account to perform operations like a user.</p>
+                                    </div>}>{selectedUser?.createdBy}</Tooltip>
                                 </span>
                             </div>
                             <form onSubmit={onResetPasswordSubmit} className="w-full">
-                                <input type="hidden" name="uuid" value={selectedUser.uuid} />
-                                <Button variant="flat" color="danger" type="submit" className={`${selectedUser.username == currentUser ? "hidden" : ""} w-full`} isDisabled={resettingPassword}>
+                                <input type="hidden" name="uuid" value={selectedUser?.uuid} />
+                                <Button variant="flat" color="danger" type="submit" className={`${selectedUser?.username == currentUser ? "hidden" : ""} w-full`} isDisabled={resettingPassword}>
                                         {resettingPassword ? "Resetting..." : "Reset User Password"}
                                 </Button>
                             </form>
-                            <Button variant="flat" color="default" className={selectedUser.username != currentUser ? "hidden" : ""} onClick={()=>onOpenChangePass()}>
+                            <Button variant="flat" color="default" className={selectedUser?.username != currentUser ? "hidden" : ""} onClick={()=>onOpenChangePass()}>
                                 Change Password
                             </Button>
                         </ModalBody>
@@ -311,7 +327,7 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
 
             <Modal isOpen={isChangePassOpen} onOpenChange={onOpenChangePassChange}>
                 <ModalContent>
-                    {(onClose) => (
+                    {() => (
                         <>
                             <ModalHeader className="font-normal flex flex-col justify-start gap-1">
                                 Change Password
@@ -330,7 +346,7 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                                         } required isRequired onValueChange={(e)=>{
                                             
                                             if (currentPassError) {
-                                                setCurrentPassError(null);
+                                                setCurrentPassError("");
                                             }
                                             
                                             setCurrentPass(e)
@@ -349,7 +365,7 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                                             if (e !== verifiedPass && !!verifiedPass) {
                                                 setVerifiedPassError("Passwords do not match");
                                             } else {
-                                                setVerifiedPassError(null);
+                                                setVerifiedPassError("");
                                             }
                                             
                                             setNewPass(e)
@@ -367,7 +383,7 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                                             if (e !== newPass) {
                                                 setVerifiedPassError("Passwords do not match");
                                             } else {
-                                                setVerifiedPassError(null);
+                                                setVerifiedPassError("");
                                             }
                                             
                                             setVerifiedPass(e)
@@ -391,18 +407,18 @@ export function UsersTable( {currentUser}:{currentUser: any} ) {
                 </ModalContent>
             </Modal>
 
-            <Modal isOpen={isResetPassOpen} onOpenChange={onOpenResetPassChange} onClose={()=>setNewPass(null)}>
+            <Modal isOpen={isResetPassOpen} onOpenChange={onOpenResetPassChange} onClose={()=>setNewPass("")}>
                 <ModalContent>
                     {(onClose) => (
                         <>
-                        <ModalHeader className="font-normal"><p>Password reset for <b>{selectedUser.username}</b></p></ModalHeader>
+                        <ModalHeader className="font-normal"><p>Password reset for <b>{selectedUser?.username}</b></p></ModalHeader>
                         <ModalBody className="flex flex-col text-center items-center justify-center">
-                            <p><b>{selectedUser.username}</b>'{selectedUser.username.endsWith("s") ? "":"s"} password has been reset! Here is their new password:</p>
+                            <p><b>{selectedUser?.username}</b>&apos;{selectedUser?.username.endsWith("s") ? "":"s"} password has been reset! Here is their new password:</p>
                             <p className="text-lg font-bold">{newPass}</p>
                         </ModalBody>
                         <ModalFooter className="justify-center">
                             <Button variant="flat" color="primary" onClick={()=>{
-                                setNewPass(null);
+                                setNewPass("");
                                 onClose();
                                 onCloseEdit();
                             }} className="w-[80%]">

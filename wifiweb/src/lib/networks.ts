@@ -1,18 +1,16 @@
 declare const global: WiFiWebGlobal;
 import * as cmd from "./cmd";
-import ini from "ini";
-import y2j from "js-yaml";
 
 export async function getConnections() {
     const nmcliExists = await cmd.commandExists("nmcli")
 
      //! Get all saved WiFi connections
-     let connections = []
+     const connections = []
 
      let connectionInformations = []
  
      if (nmcliExists) {
-         connectionInformations = (await cmd.runTerminalCommand("nmcli -t -c no c show"))
+         connectionInformations = (await cmd.runTerminalCommand("sudo nmcli -t -c no c show"))
              .split("\n")
              .map((i: string) => i.trim())
              .map((i: string) => i.replace(/:$/g, ""))
@@ -47,9 +45,9 @@ export async function getConnections() {
                 },
                 hidden: parsedNmcli["802-11-wireless.hidden"] === "yes",
                 additional: {
-                    ...Object.fromEntries(Object.entries(parsedNmcli).filter(([key, value]) => key.toLowerCase().startsWith("ip")).map(([key, value]) => [key, value?.toString() ?? null]))
+                    ...Object.fromEntries(Object.entries(parsedNmcli).filter(([key]) => key.toLowerCase().startsWith("ip")).map(([key, value]) => [key, value?.toString() ?? null]))
                 },
-                interface: parsedNmcli["connection.interface-name"] as string || "N/A",
+                interface: parsedNmcli["connection.interface-name"] as string || parsedNmcli["GENERAL.IP-IFACE"] as string || "N/A",
                 connected: false
              })
  
@@ -82,12 +80,12 @@ export async function getNetworks() {
 }
 
 export async function getConnection(UUID: string) {
-    return await cmd.runTerminalCommand(`nmcli -t -c no c show ${UUID} --show-secrets`)
+    return await cmd.runTerminalCommand(`sudo nmcli -t -c no c show ${UUID} --show-secrets`)
 }
 
 export async function getCurrentConnection() {
-    let currentConns = await cmd.runTerminalCommand("nmcli -t -c no c show --active").catch(() => "")
-    global.connections.forEach((i: any) => i.connected = false)
+    const currentConns = await cmd.runTerminalCommand("sudo nmcli -t -c no c show --active").catch(() => "")
+    global.connections.forEach((i: WiFiWebGlobal["connections"][0]) => i.connected = false)
     currentConns
         .split("\n")
         .map((i: string) => i.trim())
@@ -97,7 +95,7 @@ export async function getCurrentConnection() {
         .forEach((i: string[]) => {
             // set <conn>.connected = true
             const UUID = i.find((i: string) => i.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/))
-            const conn = global.connections.find((i: any) => i.uuid === UUID)
+            const conn = global.connections.find((i: WiFiWebGlobal["connections"][0]) => i.uuid === UUID)
             if (conn) {
                 conn.connected = true
             }
@@ -107,13 +105,15 @@ export async function getCurrentConnection() {
 
 
 export async function nmcliParser(inp: string): Promise<{[key:string]: string | number | null}> {
-    let out = inp.split("\n").map((i: string) => i.trim()).filter((i: string) => i !== "").map((i: string) => i.split(":"))
+    const out = inp.split("\n").map((i: string) => i.trim()).filter((i: string) => i !== "").map((i: string) => i.split(":"))
 
     for (let i = 0; i < out.length; i++) {
         out[i] = [out[i][0], out[i].slice(1).join(":")]
     }
 
-    let outObj: any = {}
+    const  outObj: {
+        [key:string]: string | number | null
+    } = {}
 
     for (const i of out) {
         const key = i[0];

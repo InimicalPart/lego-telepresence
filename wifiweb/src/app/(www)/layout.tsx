@@ -2,7 +2,6 @@
 import "@/styles/globals.css"
 import { Providers } from "@/components/providers";
 import { Viewport } from "next";
-import { AddIcon, XMarkIcon } from "@/components/icons";
 import HeaderAlert from "@/components/header";
 import { Toaster } from "@/components/ui/sonner";
 import { WarnMobileUnstableWebsite } from "@/components/warnMobile";

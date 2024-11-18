@@ -6,13 +6,5 @@
     "privileges": 1,
     "createdAt": "2024-11-13T08:41:35.737Z",
     "createdBy": "SYSTEM"
-  },
-  {
-    "uuid": "3332633f-7907-4f48-92eb-93616d7eff98",
-    "username": "inimi",
-    "password": "$2b$10$3.tHlwPWyU2JfnfrNDDep.bCdBCTrpwOOcVtTE58bLZULBQSCqYm6",
-    "createdAt": "2024-11-14T12:47:53.034Z",
-    "createdBy": "admin",
-    "privileges": 0
   }
 ]
