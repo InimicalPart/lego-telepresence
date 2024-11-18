@@ -1,4 +1,4 @@
-import { activateConnection, deactivateConnection, modifyWiFiCommandGenerator, runTerminalCommand } from "@/lib/cmd";
+import { deactivateConnection } from "@/lib/cmd";
 import { JWTCheck } from "@/lib/credCheck";
 import { getConnections, getCurrentConnection } from "@/lib/networks";
 import { NextRequest, NextResponse } from "next/server";
@@ -29,10 +29,4 @@ export async function POST(req: NextRequest, {params}: {params:Promise<{UUID: st
     await getConnections()
     await getCurrentConnection()
     return NextResponse.json({message: "OK"}, {status: 200})
-}
-
-function sleep(ms: number) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms)
-    })
 }

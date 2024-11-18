@@ -21,15 +21,10 @@
 
 import LogInForm from "@/components/logInForm";
 import { runTerminalCommand } from "@/lib/cmd";
-import { Button, Card, CardBody, CardHeader, Input, Spacer } from "@nextui-org/react";
+import { Card, CardBody, CardHeader } from "@nextui-org/react";
 import { cookies } from "next/headers";
-import { SignJWT, jwtVerify } from "jose";
 import { JWTFromCreds, verifyCreds, verifyJWT } from "@/lib/credentialManager";
 import { redirect } from "next/navigation";
-
-type SearchParamProps = {
-    searchParams: Record<string, string> | null | undefined
-}
 
 
 import { z } from 'zod'
@@ -44,12 +39,15 @@ const schema = z.object({
         invalid_type_error: 'Invalid password',
     })
 })
- 
+
+
 
 export default async function LoginPage({
     searchParams
-}:SearchParamProps) {
-    let logOut = (await searchParams)?.logout === "true"
+}:{
+    searchParams: Promise<Record<string, string>> | undefined
+}) {
+    const logOut = (await searchParams)?.logout === "true"
 
     async function logOutAction(){
         "use server"
@@ -74,7 +72,7 @@ export default async function LoginPage({
         }
     }
 
-    async function logIn(_: any, form: FormData) {
+    async function logIn(_: {message: string}, form: FormData) {
         "use server"
 
         const validatedFields = schema.safeParse({

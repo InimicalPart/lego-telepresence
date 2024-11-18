@@ -5,13 +5,13 @@ import { Card, CardHeader, CardBody, CardFooter, Button, useDisclosure, Modal, M
 import { ScrollArea } from "@radix-ui/react-scroll-area"
 import { toast } from "sonner"
 import { UsersTable } from "./usersTable"
-import { useState } from "react"
+import { FormEvent, useState } from "react"
 
 export default function Users({
     user,
     privileges
 }: {
-    user: any,
+    user: string,
     privileges: UserPrivileges
 }) {
     const {isOpen: isCreateUserOpen, onClose: onCreateUserClose, onOpen: onCreateUserOpen, onOpenChange: OnCreateUserOpenChange} = useDisclosure();
@@ -22,17 +22,17 @@ export default function Users({
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const [username, setUsername] = useState<string | null>(null);
     const [password, setPassword] = useState<string | null>(null);
-    const [privs, setPrivs] = useState<any>(new Set([]));
+    const [privs, setPrivs] = useState<Set<string>>(new Set([]));
     const [submitting, setSubmitting] = useState<boolean>(false);
 
-    function onFormSubmit(e: any) {
+    function onFormSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setSubmitting(true)
         const prives = Array.from(privs as Set<string>).map((priv: string) => Privileges[priv as keyof typeof Privileges]).reduce((a: number, b: number) => a | b, 0) ?? 0
 
-        console.log(e.target.username.value, e.target.password.value, prives)
+        console.log((e.target as HTMLFormElement).username.value, (e.target as HTMLFormElement).password.value, prives)
 
-        const form = new FormData(e.target)
+        const form = new FormData((e.target as HTMLFormElement))
 
         form.set("privileges", prives.toString())
 
@@ -88,7 +88,7 @@ export default function Users({
                 }))
             }
             setSubmitting(false)
-        }).catch((e) => {
+        }).catch(() => {
             setSubmitting(false)
         })
         
@@ -115,7 +115,7 @@ export default function Users({
             </Card>
             <Modal isOpen={isCreateUserOpen} onOpenChange={OnCreateUserOpenChange}>
                 <ModalContent>
-                {(onClose) => (
+                {() => (
                     <>
                     <ModalHeader className="flex flex-col gap-1">Create a User</ModalHeader>
                     <ModalBody>
@@ -146,10 +146,10 @@ export default function Users({
                                 label="Privileges"
                                 selectionMode="multiple"
                                 placeholder="Select privileges"
-                                onSelectionChange={setPrivs}
+                                onSelectionChange={(keys) => setPrivs(new Set(keys as unknown as string[]))}
                                 name="privileges"
                             >
-                                {Object.keys(Privileges).filter(a=>!!isNaN(a as any)).map((priv, i) => (
+                                {Object.keys(Privileges).filter(a=>!!isNaN(parseInt(a as string))).map((priv, i) => (
                                     <SelectItem key={priv} aria-label={FriendlyNames[Privileges[priv as keyof typeof Privileges]]}>
                                         <Tooltip showArrow placement="left" offset={20} content={<div className="max-w-[400px]">
                                             <Chip key={i} color={priv == "ROOT" ? "danger" : "primary"} variant="flat" size="md">
@@ -186,7 +186,7 @@ export default function Users({
                         <>
                             <ModalHeader className="font-normal"><p>Account created for <b>{username}</b>!</p></ModalHeader>
                             <ModalBody className="flex flex-col text-center items-center justify-center">
-                                <p><b>{username}</b>'{username?.endsWith("s") ? "":"s"} account has been created! Since you didn't specify a password, we chose one for you!</p>
+                                <p><b>{username}</b>&apos;{username?.endsWith("s") ? "":"s"} account has been created! Since you didn&apos;t specify a password, we chose one for you!</p>
                                 <p className="text-lg font-bold">{password}</p>
                             </ModalBody>
                             <ModalFooter className="justify-center">

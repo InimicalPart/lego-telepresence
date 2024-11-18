@@ -1,13 +1,12 @@
-import { runTerminalCommand } from "@/lib/cmd"
 import { JWTCheck } from "@/lib/credCheck"
 import { changeUserPassword, deleteUserByUUID, generatePassword, getUserByUUID, getUserPassHash, getUUIDbyUser, JWTFromCreds, verifyPassword } from "@/lib/credentialManager"
 import UserPrivileges, { Privileges } from "@/lib/privileges"
 import { cookies } from "next/headers"
-import { connection, NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 declare const global: WiFiWebGlobal
 
-export async function DELETE(req: NextRequest, {params}: {params:Promise<{UUID: string}>}) {
+export async function DELETE(_: NextRequest, {params}: {params:Promise<{UUID: string}>}) {
     const { UUID } = await params
     const res = await JWTCheck(true, Privileges.MANAGE_USERS)
     if (res.success !== true) return NextResponse.json({message: "Unauthorized"}, {status: 401})

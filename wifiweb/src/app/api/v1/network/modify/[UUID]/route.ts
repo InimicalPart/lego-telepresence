@@ -1,8 +1,6 @@
 import { modifyWiFiCommandGenerator, restartConnection, runTerminalCommand } from "@/lib/cmd";
 import { JWTCheck } from "@/lib/credCheck";
 import { getConnections, getCurrentConnection } from "@/lib/networks";
-import { NextApiRequest } from "next";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 declare const global: WiFiWebGlobal
@@ -55,8 +53,10 @@ export async function PATCH(req: NextRequest, {params}: {params:Promise<{UUID: s
     await runTerminalCommand(cmd)
 
     await sleep(1000)
-    await restartConnection(UUID)
-    await sleep(1000)
+    if (connection.connected) {
+        await restartConnection(UUID)
+        await sleep(1000)
+    }
     await getConnections()
     await getCurrentConnection()
     await sleep(1000)

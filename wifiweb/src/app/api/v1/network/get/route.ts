@@ -1,12 +1,10 @@
 import { JWTCheck } from "@/lib/credCheck";
 import { getConnections, getCurrentConnection } from "@/lib/networks";
-import { NextApiRequest } from "next";
-import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 declare const global: WiFiWebGlobal
 
-export async function GET(req: NextRequest) {
+export async function GET() {
     const res = await JWTCheck(true)
     if (res.success !== true) return NextResponse.json({message: "Unauthorized"}, {status: 401})
 
@@ -16,7 +14,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
         connections: global.connections,
     }, {status:200})
-
-
-
 }

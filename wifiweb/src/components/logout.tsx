@@ -2,9 +2,13 @@
 
 import { useEffect } from "react"
 
-export default function LogOut({action}:{action:any}) {
+interface LogOutProps {
+    action: () => Promise<void>;
+}
+
+export default function LogOut({ action }: LogOutProps) {
     useEffect(() => {
-        (document.getElementById("logOutForm") as any)?.form?.requestSubmit()
+        (document.getElementById("logOutForm") as HTMLFormElement)?.form?.requestSubmit()
     },[])
     return (<>
         <form id="logOutForm" action={action}>

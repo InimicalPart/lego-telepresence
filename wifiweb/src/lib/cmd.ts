@@ -49,7 +49,7 @@ export async function commandExists(command: string) {
   try {
     await runTerminalCommand(`command -v ${command}`);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
@@ -75,7 +75,7 @@ export async function createWiFiCommandGenerator(data: {
     hidden?: boolean,
     interface?: string | null
 }) {
-    return `nmcli c add connection.type 802-11-wireless ${await createNmcliParameters(data)}`
+    return `sudo nmcli c add connection.type 802-11-wireless ${await createNmcliParameters(data)}`
 }
 
 export async function modifyWiFiCommandGenerator(UUID:string, data: {
@@ -100,16 +100,16 @@ export async function modifyWiFiCommandGenerator(UUID:string, data: {
 }) {
     const oldData = global.connections.find((i) => i.uuid === UUID)
 
-    return `nmcli c modify "${UUID}" ${await createNmcliParameters(data, oldData)}`
+    return `sudo nmcli c modify "${UUID}" ${await createNmcliParameters(data, oldData)}`
 }
 
 
 export async function deactivateConnection(UUID: string) {
-    return await runTerminalCommand(`nmcli c down "${UUID}"`)
+    return await runTerminalCommand(`sudo nmcli c down "${UUID}"`)
 }
 
 export async function activateConnection(UUID: string) {
-    return await runTerminalCommand(`nmcli c up "${UUID}"`)
+    return await runTerminalCommand(`sudo nmcli c up "${UUID}"`)
 }
 
 export const restartConnection = activateConnection
@@ -132,11 +132,32 @@ async function createNmcliParameters(data: {
     },
     interface?: string | null,
     hidden?: boolean
-}, negateWith: any = {}) {
+}, negateWith?: WiFiWebGlobal["connections"][0]) {
 
-    let parametersToAdd = []
+    if (!negateWith) negateWith = {
+        uuid: '',
+        name: '',
+        wifiSecurity: '',
+        credentials: null,
+        hidden: false,
+        connected: false,
+        additional: {},
+        interface: "N/A",
+        static: {
+            ips: null,
+            gateway: null,
+            dns: null
+        },
+        autoconnect: {
+            enabled: false,
+            priority: 0,
+            retries: 0
+        }
+    }
 
-    if (data.ssid && data.ssid !== negateWith.ssid) {
+    const parametersToAdd = []
+
+    if (data.ssid && data.ssid !== negateWith.name) {
         parametersToAdd.push(`802-11-wireless.ssid "${data.ssid}"`)
         parametersToAdd.push(`connection.id "${data.ssid}"`)
     }
@@ -177,7 +198,7 @@ async function createNmcliParameters(data: {
     }
 
     if (data.static) {
-        if (typeof data.static.ips == "string" && data.static.ips !== negateWith.static?.ips) {
+        if (typeof data.static.ips == "string" && typeof negateWith.static?.ips == "string" && data.static.ips !== negateWith.static.ips) {
             parametersToAdd.push(`ipv4.addresses "${data.static.ips}"`)
         } else if (Array.isArray(data.static.ips) && (!negateWith.static || data.static.ips.join(",") !== negateWith.static.ips?.join(","))) {
             parametersToAdd.push(`ipv4.addresses "${data.static.ips.join(",")}"`)
@@ -187,7 +208,7 @@ async function createNmcliParameters(data: {
             parametersToAdd.push(`ipv4.gateway "${data.static.gateway}"`)
         }
 
-        if (typeof data.static.dns == "string" && data.static.dns !== negateWith.static?.dns) {
+        if (typeof data.static.dns == "string" && typeof negateWith.static?.dns == "string" && data.static.dns !== negateWith.static?.dns) {
             parametersToAdd.push(`ipv4.dns "${data.static.dns}"`)
         } else if (Array.isArray(data.static.dns) && (!negateWith.static || data.static.dns.join(",") !== negateWith.static.dns?.join(","))) {
             parametersToAdd.push(`ipv4.dns "${data.static.dns.join(",")}"`)
@@ -233,9 +254,9 @@ export async function getNetworkHardware(): Promise<{
 
     return [
         ...json
-        .filter((i: any) => i.class === "network" && Object.keys(i.capabilities).includes("wireless"))
-        .map((i: any) => ({
-            interface: i.logicalname,
+        .filter((i: {class:string, capabilities: {[key:string]:string}}) => i.class === "network" && Object.keys(i.capabilities).includes("wireless"))
+        .map((i: {logicalname: string | string[], businfo:string, serial: string}) => ({
+            interface: typeof i.logicalname == "string" ? i.logicalname : (i.logicalname as string[]).find((i: string) => i.startsWith("wl")) ?? "N/A",
             via: i.businfo.split("@")?.[0]?.toUpperCase(),
             serial: i.serial,
         }))

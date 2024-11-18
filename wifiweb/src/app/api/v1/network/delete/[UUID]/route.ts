@@ -1,8 +1,5 @@
 import { runTerminalCommand } from "@/lib/cmd";
 import { JWTCheck } from "@/lib/credCheck";
-import { getConnections, getCurrentConnection } from "@/lib/networks";
-import { NextApiRequest } from "next";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 declare const global: WiFiWebGlobal
@@ -21,7 +18,7 @@ export async function DELETE(req: NextRequest, {params}: {params:Promise<{UUID: 
         return NextResponse.json({message: "Connection not found"}, {status: 404})
     }
 
-    await runTerminalCommand(`nmcli connection delete ${uuid}`)
+    await runTerminalCommand(`sudo nmcli connection delete ${uuid}`)
 
     return NextResponse.json({message: "OK"}, {status: 200})
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@nextui-org/react";
+import Image from "next/image";
 import { useState } from "react";
 
 export function WarnMobileUnstableWebsite(){
@@ -18,8 +19,8 @@ export function WarnMobileUnstableWebsite(){
             <div className="text-center justify-center items-center flex flex-col px-10">
                 <div className="flex flex-row gap-2">
                     <p className="dark:text-white text-black text-4xl">WiFiWeb</p>
-                    <img src="/wifiweb-white.png" alt="WiFiWeb Logo" className="w-10 h-10 dark:block hidden" />
-                    <img src="/wifiweb-black.png" alt="WiFiWeb Logo" className="w-10 h-10 block dark:hidden" />
+                    <Image src="/wifiweb-white.png" width={40} height={40} alt="WiFiWeb Logo" className="w-10 h-10 dark:block hidden" />
+                    <Image src="/wifiweb-black.png" width={40} height={40} alt="WiFiWeb Logo" className="w-10 h-10 block dark:hidden" />
                 </div>
                 <br />
                 <h1 className="dark:text-white text-black text-lg">WiFiWeb is not supported or intended to function on small screens like yours.</h1>
