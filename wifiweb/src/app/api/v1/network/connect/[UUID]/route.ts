@@ -26,12 +26,13 @@ export async function POST(req: NextRequest, {params}: {params:Promise<{UUID: st
 
     // TODO: add validation
 
-    const cmd = await modifyWiFiCommandGenerator(UUID, {
-        interface: form.get('interface') as string ?? null
-    })
-
-    await runTerminalCommand(cmd)
-    await sleep(1000)
+    if (form.get("interface")) {
+        const cmd = await modifyWiFiCommandGenerator(UUID, {
+            interface: form.get('interface') as string ?? null,
+        }, false)
+        await runTerminalCommand(cmd)
+        await sleep(1000)
+    }
     await activateConnection(UUID)
 
     await getConnections()
