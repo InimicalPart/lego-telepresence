@@ -1,0 +1,25 @@
+#! This is a systemd service file for the server runnning the RCC Website
+#! It is used to start the RCC Website on boot and restart it if it crashes
+#! This file should be uploaded as /lib/systemd/system/main.service
+#! 
+#! chmod 644 /lib/systemd/system/main.service
+
+[Unit]
+Description=LTP-WWW - RCC Website
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=50
+StartLimitIntervalSec=1d
+
+[Service]
+User=root
+WorkingDirectory=/opt/main
+Restart=always
+Type=simple
+ExecStart=/bin/bash -c "sudo -u lowpriv $(which npx) next start --hostname 0.0.0.0 --port 8080"
+ExecStop=/bin/bash -c "for pid in $(/usr/bin/lsof -i :8080 | grep -E 'TCP .*:(http-alt) \\(LISTEN\\)' | awk '{ print $2 }'); do kill -s SIGINT $pid; done"
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
