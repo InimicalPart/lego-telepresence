@@ -36,60 +36,74 @@ fi
 
 ROOT_DIR=`readlink -f "$SERVER_RESOURCES_DIR/../"`
 
-# Function to upload and setup wifiweb
-UnS_wifiweb() {
+# Function to clean, upload and setup wifiweb
+CnUnS_wifiweb() {
+    echo "[INIT] Running clean-up scripts for WiFiWeb"
+    source "$SERVER_RESOURCES_DIR/scripts/wifiweb/wifiweb-cleanup.sh" $SERVER_RESOURCES_DIR
+    echo "[WIFIWEB] Clean-up done"
     echo "[INIT] Running upload & setup scripts for WiFiWeb"
     source "$SERVER_RESOURCES_DIR/scripts/wifiweb/wifiweb-upload.sh" $ROOT_DIR
     source "$SERVER_RESOURCES_DIR/scripts/wifiweb/wifiweb-setup.sh" $SERVER_RESOURCES_DIR
     echo "[WIFIWEB] Done"
 }
 
-# Function to upload and setup main
-UnS_main() {
+# Function to clean, upload and setup main
+CnUnS_main() {
+    echo "[INIT] Running clean-up scripts for Main"
+    source "$SERVER_RESOURCES_DIR/scripts/main/main-cleanup.sh" $SERVER_RESOURCES_DIR
+    echo "[MAIN] Clean-up done"
     echo "[INIT] Running upload & setup scripts for Main"
     source "$SERVER_RESOURCES_DIR/scripts/main/main-upload.sh" $ROOT_DIR
     source "$SERVER_RESOURCES_DIR/scripts/main/main-setup.sh" $SERVER_RESOURCES_DIR
     echo "[MAIN] Done"
 }
 
-# Function to upload and setup car-client
-UnS_car_client() {
+# Function to clean, upload and setup car-client
+CnUnS_car_client() {
+    echo "[INIT] Running clean-up scripts for car-client"
+    source "$SERVER_RESOURCES_DIR/scripts/car-client/car-client-cleanup.sh" $SERVER_RESOURCES_DIR
+    echo "[CAR-CLIENT] Clean-up done"
     echo "[INIT] Running upload & setup scripts for car-client"
     source "$SERVER_RESOURCES_DIR/scripts/car-client/car-client-upload.sh" $ROOT_DIR
     source "$SERVER_RESOURCES_DIR/scripts/car-client/car-client-setup.sh" $SERVER_RESOURCES_DIR
     echo "[CAR-CLIENT] Done"
 }
 
-# Function to upload and setup cam-client
-UnS_cam_client() {
+# Function to clean, upload and setup cam-client
+CnUnS_cam_client() {
+    echo "[INIT] Running clean-up scripts for cam-client"
+    source "$SERVER_RESOURCES_DIR/scripts/cam-client/cam-client-cleanup.sh" $SERVER_RESOURCES_DIR
+    echo "[CAM-CLIENT] Clean-up done"
     echo "[INIT] Running upload & setup scripts for cam-client"
     source "$SERVER_RESOURCES_DIR/scripts/cam-client/cam-client-upload.sh" $ROOT_DIR
     source "$SERVER_RESOURCES_DIR/scripts/cam-client/cam-client-setup.sh" $SERVER_RESOURCES_DIR
     echo "[CAM-CLIENT] Done"
 }
 
+
+
 # Check command-line arguments
 if [ $# -eq 0 ]; then
-    echo "[INIT] No specific components specified, uploading and setting up all"
-    UnS_wifiweb
-    UnS_main
-    UnS_car_client
-    UnS_cam_client
+    echo "[INIT] No specific components specified, cleaning, uploading and setting up all"
+    CnUnS_wifiweb
+    CnUnS_main
+    CnUnS_car_client
+    CnUnS_cam_client
 else
     for component in "$@"
     do
         case $component in
             wifiweb)
-                UnS_wifiweb
+                CnUnS_wifiweb
                 ;;
             main)
-                UnS_main
+                CnUnS_main
                 ;;
             car-client)
-                UnS_car_client
+                CnUnS_car_client
                 ;;
             cam-client)
-                UnS_cam_client
+                CnUnS_cam_client
                 ;;
             *)
                 echo "[ERROR] Unknown component: $component"

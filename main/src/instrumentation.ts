@@ -1,0 +1,158 @@
+import { LTPGlobal } from './interfaces/global';
+import EventEmitter from 'events';
+import { generateRandomHex } from './utils/misc';
+
+declare const global: LTPGlobal;
+
+global.connections = [];
+global.nms = null;
+global.events = new EventEmitter();
+
+async function randomString(length: number) {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
+
+
+export async function register() {
+    if (process.env.NEXT_RUNTIME === 'edge') return;
+
+    global.events.on('streamConnect', async (data) => {
+        console.log(`Stream connected: ${data.app}/${data.name}`);
+
+        //find camera that has *.cam.ssid == data.name, then set isLive to true
+        const cam = global.connections.find(cam => cam.cam?.ssid == data.name);
+
+        if (cam && cam.cam && !cam.cam?.isLive) {
+            console.log("Setting camera to live");
+            cam.cam.isLive = true;
+        }
+    })
+
+    global.events.on('streamDisconnect', async (data) => {
+        console.log(`Stream disconnected: ${data.app}/${data.name}`);
+
+        //find camera that has *.cam.ssid == data.name, then set isLive to false
+        const cam = global.connections.find(cam => cam.cam?.ssid == data.name);
+
+        if (cam && cam.cam?.isLive) {
+            console.log("Setting camera to not live");
+            cam.cam.isLive = false;
+        }
+    })
+
+    global.events.on('clientConnect', async (data) => {
+        console.log(`Client connected: ${data.app}/${data.name}`);
+    })
+
+    global.events.on('clientDisconnect', async (data) => {
+        console.log(`Client disconnected: ${data.app}/${data.name}`);
+    })
+    await setupRTMP();
+}
+
+async function setupRTMP() {
+    if (process.env.NEXT_RUNTIME === 'nodejs') {
+        global.rtmpSecret = await generateRandomHex(64);
+        const APIUSER = await randomString(32);
+        const APIPASS = await randomString(32);
+    
+        console.log(`API User: ${APIUSER}`);
+        console.log(`API Pass: ${APIPASS}`);
+
+        const NodeMediaServer = await import('node-media-server');
+        const nms = new NodeMediaServer.default({
+            rtmp: {
+                port: 1935,
+                chunk_size: 60000,
+                gop_cache: true,
+                ping: 30,
+                ping_timeout: 60
+            },
+            http: {
+                port: process.env.NODE_ENV == "development" ? 8000 : 4729,
+                allow_origin: '*',
+                mediaroot: './media',
+            },
+            auth: {
+                api: true,
+                api_user: APIUSER,
+                api_pass: APIPASS,
+                secret: global.rtmpSecret,
+                play: true,
+                publish: true
+            },
+            logType: 0
+        })
+        nms.run();
+
+        nms.on('postPublish', async (id, StreamPath) => {
+            const streamPath = StreamPath.split("/").filter((x: string) => x != "");
+
+            const app = streamPath[0];
+            const streamName = streamPath[1];
+
+            global.events.emit('streamConnect', {
+                id: id,
+                name: streamName,
+                app: app,
+            });
+
+        });
+          
+
+        nms.on('donePublish', async (id, StreamPath) => {
+            const streamPath = StreamPath.split("/").filter((x: string) => x != "");
+
+            const app = streamPath[0];
+            const streamName = streamPath[1];
+
+            global.events.emit('streamDisconnect', {
+                id: id,
+                name: streamName,
+                app: app,
+            });
+
+        });
+
+
+        //@ts-expect-error - NodeMediaServer has wrong types
+        nms.on('postConnect', async (id, args: {streamPath:string}) => {
+            if (!Object.keys(args).includes("app")) {                
+                const streamPath = args.streamPath.split("/").filter((x: string) => x != "");
+
+                const app = streamPath[0];
+                const streamName = streamPath[1];
+
+                global.events.emit('clientConnect', {
+                    id: id,
+                    name: streamName,
+                    app: app,
+                });
+            }
+        });
+        
+        //@ts-expect-error - NodeMediaServer has wrong types
+        nms.on('doneConnect', async (id, args: {streamPath:string}) => {
+            if (!Object.keys(args).includes("app")) {                
+                const streamPath = args.streamPath.split("/").filter((x: string) => x != "");
+
+                const app = streamPath[0];
+                const streamName = streamPath[1];
+
+                global.events.emit('clientDisconnect', {
+                    id: id,
+                    name: streamName,
+                    app: app,
+                });
+
+            }
+        });
+        global.nms = nms;
+    }
+}

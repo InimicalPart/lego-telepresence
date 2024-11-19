@@ -1,0 +1,24 @@
+#! This is a systemd service file for the Raspberry Pi runnning the RCC Car Controller
+#! It is used to start the RCC Car Controller on boot and restart it if it crashes
+#! This file should be uploaded as /lib/systemd/system/car-client.service
+#! 
+#! chmod 644 /lib/systemd/system/car-client.service
+
+[Unit]
+Description=Car Client - RCC Car Controller
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=50
+StartLimitIntervalSec=1d
+
+[Service]
+User=root
+WorkingDirectory=/opt/car-client
+Restart=always
+Type=simple
+ExecStart=/bin/bash -c "sudo -u lowpriv $(which node) dist/client"
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

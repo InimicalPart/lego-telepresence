@@ -16,12 +16,16 @@
     - Phone is big
     - Not enough LEGO pieces for an adjustable phone mount
     - How?
-- [ ] Setup LTP on external server
-  - [ ] Test streaming delay, worse?
-  - [ ] Custom service to auto-launch NextJS on start-up
+- [ ] CRIT: Implement login system for LTP-WWW
+- [x] CRIT: Allow only authorized devices to connect to RTMP
+- [x] Setup LTP on external server
+  - [x] Test streaming delay, worse?
+    - [x] Same (2-3s)
+  - [x] Custom service to auto-launch NextJS on start-up
   - [x] Domain? IP?
-    - legomeet.newseed.se
-  - Do we need SSL for RTMP streaming?
+    - [x] legomeet.newseed.se
+  - [x] Do we need SSL for RTMP streaming?
+    - [x] No
 - [ ] Real-time available cars updating on /
 - [ ] Real-time car availability updating on /[UUID]/control
 - [ ] Implement instructional movement
@@ -48,8 +52,8 @@
     - [ ] My own?
   - [ ] Add functionality to add a connection based on the Wi-Fis around the server
   - [x] \(BUG): WiFiWeb will reset all static IP, DNS and gateway configurations when manually asking WiFiWeb to connect to a network
-- [ ] Raspberry PI
-  - [ ] Create services that launch the car and cam client everytime the PI starts, to allow for fast initialization
+- [x] Raspberry PI
+  - [x] Create services that launch the car and cam client everytime the PI starts, to allow for fast initialization
   - [x] How do we quickly configure new Wi-Fis?
     - [x] Configure phone hotspots before-hand which the RPI will connect to if it doesn't find any other networks?
     - [x] Set a static IP for RPI when connected to these networks
