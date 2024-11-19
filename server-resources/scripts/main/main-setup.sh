@@ -92,3 +92,7 @@ sshpass -P passphrase -p "$MAIN_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHo
 #! Start the NGINX service on $MAIN_UPLOAD_HOST as sudo
 echo "[MAIN] Starting the NGINX service on $MAIN_UPLOAD_HOST"
 sshpass -P passphrase -p "$MAIN_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $MAIN_UPLOAD_USERNAME $MAIN_UPLOAD_HOST "echo \"$MAIN_UPLOAD_PASSWORD\" | sudo -S systemctl enable nginx --now > /dev/null 2>&1"
+
+#! Allow all connections on 80, 443, 1935 and 8000
+echo "[MAIN] Allowing all connections on 80, 443, 1935 and 8000 on $MAIN_UPLOAD_HOST"
+sshpass -P passphrase -p "$MAIN_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $MAIN_UPLOAD_USERNAME $MAIN_UPLOAD_HOST "echo \"$MAIN_UPLOAD_PASSWORD\" | sudo -S ufw allow 80,443,1935,8000/tcp > /dev/null 2>&1"
