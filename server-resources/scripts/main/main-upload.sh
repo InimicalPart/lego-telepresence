@@ -37,7 +37,7 @@ PREVIOUS_DIR=$(pwd)
 cd $ROOT_DIR/main
 
 #! Adding next-ws
-echo "[MAIN] Adding next-ws"
+echo "[MAIN] Patching NextJS with next-ws"
 sudo -u $USR bash -i -c "npx -y --yes next-ws-cli@latest patch -y --yes > /dev/null 2>&1"
 
 cd $PREVIOUS_DIR

@@ -9,6 +9,11 @@ else
   ADDITIONAL_CMD=""
 fi
 
+#! Deny all connections on 80, 443, 1935 and 8000
+echo "[MAIN] Denying all connections on 80, 443, 1935 and 8000 on $MAIN_UPLOAD_HOST"
+sshpass -P passphrase -p "$MAIN_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $MAIN_UPLOAD_USERNAME $MAIN_UPLOAD_HOST "echo \"$MAIN_UPLOAD_PASSWORD\" | sudo -S ufw deny 80,443,1935,8000/tcp > /dev/null 2>&1"
+
+
 #! Check if the NGINX service exists
 NGINX_EXISTS=`sshpass -P passphrase -p "$MAIN_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $MAIN_UPLOAD_USERNAME $MAIN_UPLOAD_HOST "echo \"$MAIN_UPLOAD_PASSWORD\" | sudo -S systemctl status main >/dev/null 2>&1; echo \\\$?"`
 
