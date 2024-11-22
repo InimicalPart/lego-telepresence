@@ -28,9 +28,7 @@
   - [ ] Allow viewing and sound
 - [ ] Car Client - Fix bugs
   - [ ] Not very stable, may crash if wrongly configured, or get stuck in certain situations
-  - [ ] Reconnect function gets called multiple times, even if already connected to the car which glitches things out
   - [ ] Automatically calibrate the wheels to be straight (possible?)
-  - [ ] If car disconnects, the software will not try to reconnect, which it should try to do forever
 - [ ] WiFiWeb
   - [ ] Add functionality to add a connection from saved files?
     - [ ] *.nmconnection?
