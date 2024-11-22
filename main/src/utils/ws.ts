@@ -41,7 +41,7 @@ export async function inimizeWSClient(wsClient: any): Promise<InimizedWS> {
 
     wsClient.send = (data: string | {[key:string]: string|number|boolean|null}, options?: ((err?: Error) => void) | {[key:string]:string|number|boolean|null}, cb?: ((err?: Error) => void) | undefined) => {
 
-        let nonce =  generateNonce();
+        let nonce = generateNonce();
         try {
             
             if (typeof data == "string") {

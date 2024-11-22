@@ -206,7 +206,10 @@ export default class GoProClient {
         this.logger("Found GoPro, connecting...")
         await adapter.stopDiscovery().catch((e)=>{})
         try {
-            await device.connect()
+            await Promise.race([
+                device.connect(),
+                new Promise((resolve, reject) => setTimeout(()=>reject("Timeout"), 30000))
+            ])
         } catch (e) {
             if (!retry) {
                 this.logger("Failed to connect to GoPro (might not be paired)")

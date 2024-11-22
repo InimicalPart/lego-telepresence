@@ -115,6 +115,7 @@ function registerHandlers() {
             setTimeout(async () => {
                 connAPIKey = await generateAccessoryAPIKey();
                 socket = new WebSocket(process.env.WS_URL, { headers: {authorization: "Bearer " + connAPIKey}});
+                registerHandlers();
             }, 30000);
         }
     })
