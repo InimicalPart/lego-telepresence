@@ -56,8 +56,10 @@ export default class TechnicClient {
 
             let timeoutTimer = setTimeout(() => {
                 poweredUP.stop();
-                this.logger("Failed to find to Technic Hub with MAC", this.MAC)
-                reject("UNABLE_TO_FIND")
+                if (!this?.hub?.connected) {
+                    this.logger("Failed to find to Technic Hub with MAC", this.MAC)
+                    reject("UNABLE_TO_FIND")
+                }
             }, timeout)
 
 
@@ -74,7 +76,10 @@ export default class TechnicClient {
                     this.logger("Connecting to Technic Hub with MAC", this.MAC)
                     try {
                         await sleep(1000) // Sleep for 1 second to allow the hub to be ready
-                        await data.hub.connect();
+                        await Promise.race([
+                            data.hub.connect(),
+                            new Promise((resolve, reject) => setTimeout(() => reject("TIMEOUT"), 30000))
+                        ])
                     } catch (e) {
                         console.warn(e.toString())
                         this.logger("Failed to connect to Technic Hub with MAC (is it paired?)", this.MAC)
