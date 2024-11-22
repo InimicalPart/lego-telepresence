@@ -1,6 +1,5 @@
 import { LTPGlobal } from './interfaces/global';
 import EventEmitter from 'events';
-import { generateRandomHex } from './utils/misc';
 
 declare const global: LTPGlobal;
 
@@ -53,12 +52,36 @@ export async function register() {
     global.events.on('clientDisconnect', async (data) => {
         console.log(`Client disconnected: ${data.app}/${data.name}`);
     })
+    await setupDefUser();
     await setupRTMP();
+}
+
+async function setupDefUser() {
+    if (process.env.NEXT_RUNTIME === 'nodejs') {
+        const credManager = await import('@/utils/auth/credentialManager');
+
+        if (!credManager.userExists("admin")) {
+            console.log("User admin does not exist, creating...");
+            await credManager.createUser("admin", "ltpwebadmin", "SYSTEM").then((user) => {
+                console.log("User admin created successfully!");
+                console.log("-------------------------")
+                console.log("UUID: " + user.uuid);
+                console.log("Username: admin");
+                console.log("Password: ltpwebadmin");
+                console.log("-------------------------")
+            })
+        }
+    }
 }
 
 async function setupRTMP() {
     if (process.env.NEXT_RUNTIME === 'nodejs') {
-        global.rtmpSecret = await generateRandomHex(64);
+        const rtmp = await import('./utils/rtmp');
+        const misc = await import('./utils/misc');
+    
+        global.rtmpSecret = await misc.generateRandomHex(64);
+        console.log(`RTMP Secret: ${global.rtmpSecret}`);
+        console.log(`Temporary RTMP URL: ${await rtmp.getRtmpUrl("testing")}`)
         const APIUSER = await randomString(32);
         const APIPASS = await randomString(32);
     
@@ -84,10 +107,9 @@ async function setupRTMP() {
                 api_user: APIUSER,
                 api_pass: APIPASS,
                 secret: global.rtmpSecret,
-                play: true,
                 publish: true
             },
-            logType: 0
+            logType: 3
         })
         nms.run();
 

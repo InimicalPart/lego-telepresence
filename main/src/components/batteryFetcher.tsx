@@ -24,17 +24,9 @@ export default function BatteryFetcher({
     const checkTimer = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(()=>{
-        ws.current = new WebSocket(`${location.origin.replace("http", "ws")}/api/v1/user/ws`);
-        ws.current.onopen = () => { 
-            if (ws.current) {
-                ws.current.send(JSON.stringify({type: "query", id, query: "status"}));
-                
-                checkTimer.current = setInterval(()=>{
-                    if (ws.current) ws.current.send(JSON.stringify({type: "query", id, query: "status"}));
-                },30000);
-            
-            } 
-        }
+        if (!ws.current || (ws.current.readyState != ws.current.OPEN && ws.current.readyState != ws.current.CONNECTING))
+            ws.current = new WebSocket(`${location.origin.replace("http", "ws")}/api/v1/user/ws`);
+
         ws.current.onmessage = (message) => {
             if (!ws.current) return;
             let data;
@@ -44,12 +36,18 @@ export default function BatteryFetcher({
                 console.warn(`Error parsing message: ${error}`);
                 return;
             }
-            if (data.type === "battery") {
+            if (data.type === "ready") {
+                ws.current.send(JSON.stringify({type: "query", id, query: "status"}));
+                
+                checkTimer.current = setInterval(()=>{
+                    if (ws.current) ws.current.send(JSON.stringify({type: "query", id, query: "status"}));
+                },30000);
+            } else if (data.type === "battery") {
                 setBattery(data.level);
                 if (data.level <= LowBatteryThreshold && toastAnnounceLowBattery && !announcedLowBattery) {
                     toast.error("Low Battery - " + (id.startsWith("car")?"Car":"Camera"), {duration: 60000, description: `Battery level is at ${data.level}%`})
                     setAnnouncedLowBattery(true);
-                } else if (data.level > LowBatteryThreshold) {
+                } else if (data.level > LowBatteryThreshold && announcedLowBattery) {
                     setAnnouncedLowBattery(false);
                 }
             } else if (data.type === "status") {

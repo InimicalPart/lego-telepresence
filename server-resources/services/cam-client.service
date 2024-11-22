@@ -18,7 +18,7 @@ Restart=always
 Type=simple
 ExecStart=/bin/bash -c "sudo -u lowpriv $(which node) dist/client"
 KillMode=mixed
-KillSignal=SIGTERM
+KillSignal=SIGINT
 
 [Install]
 WantedBy=multi-user.target

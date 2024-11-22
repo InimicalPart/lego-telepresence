@@ -1,5 +1,7 @@
 import { LTPGlobal } from "@/interfaces/global";
 import { WebSocket } from "ws";
+import * as jose from "jose"
+
 
 declare const global: LTPGlobal;
 
@@ -34,10 +36,10 @@ export function generateNonce() {
 
 export type InimizedWS = WebSocket & { send: (data: string | {[key:string]: string|number|boolean|null}, options?: ((err?: Error) => void) | {[key:string]:string|number|boolean|null}, cb?: ((err?: Error) => void) | undefined) => string; sendAndAwait: (data: string | {[key:string]: string|number|boolean|null}, timeout?: number) => Promise<string | {[key:string]: string|number|boolean|null}>; }
 
-export async function inimizeWSClient(wsClient: WebSocket): Promise<InimizedWS> {
+export async function inimizeWSClient(wsClient: any): Promise<InimizedWS> {
     const oldSend = wsClient.send;
 
-    wsClient.send =  (data: string | {[key:string]: string|number|boolean|null}, options?: ((err?: Error) => void) | {[key:string]:string|number|boolean|null}, cb?: ((err?: Error) => void) | undefined) => {
+    wsClient.send = (data: string | {[key:string]: string|number|boolean|null}, options?: ((err?: Error) => void) | {[key:string]:string|number|boolean|null}, cb?: ((err?: Error) => void) | undefined) => {
 
         let nonce =  generateNonce();
         try {
@@ -96,3 +98,19 @@ export async function inimizeWSClient(wsClient: WebSocket): Promise<InimizedWS> 
     return wsClient;
 }
 
+
+export async function validateAccessoryAPI(key: string) {
+    try {
+        const { payload } = await jose.jwtVerify(key, new TextEncoder().encode(
+            process.env.ACCESSORY_SECRET ?? "8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00d"
+        ), {
+            issuer: 'inimi:ltp-accessory',
+            audience: 'inimi:ltp-accessory',
+            algorithms: ['HS256']
+        })
+        
+        return Date.now() - ((payload.iat ?? 0) *1000) < 1000 * 60 * 1;
+    } catch {
+        return false;
+    }
+}

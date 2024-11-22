@@ -1,4 +1,3 @@
-"use server"
 import { Camera, Car, Computer, X } from "@/components/icons"
 import { LTPGlobal } from "@/interfaces/global"
 import { Button, Card, CardBody, CardFooter, CardHeader, Divider, Spacer, Tooltip } from "@nextui-org/react"
@@ -8,9 +7,16 @@ import "@/styles/online-dot.css"
 import BatteryFetcher from "@/components/batteryFetcher"
 import Player from "@/components/player"
 import Link from "next/link"
+import { JWTCheck } from "@/utils/auth/credCheck"
 declare const global: LTPGlobal
 
+export const dynamic = 'force-dynamic'
+
 export default async function Home() {
+    //! Check if the user is logged in, if not, redirect to login page
+    const res = await JWTCheck();
+    if (res.success !== true) return res;
+
     const cars = global.connections?.filter(conn=>!!conn.car) ?? []
 
 
@@ -22,8 +28,16 @@ export default async function Home() {
     ...(await Promise.all(cars.map(async (car, i) => {
         const camera = (global.connections?.filter(conn=>!!conn.cam) ?? []).find(conn=>conn.cam?.serialNumber === car?.car?.cameraSerial) ?? null
 
-        const carHost = (!!car ? await car.connection.sendAndAwait({type: "system"}) : null)
-        const camHost = (!!camera ? await camera.connection.sendAndAwait({type: "system"}) : carHost)
+        const carHost = (!!car ? await car.connection.sendAndAwait({type: "system"}) : null) as {
+            model: string,
+            hostname: string,
+            os: string
+        } | null
+        const camHost = (!!camera ? await camera.connection.sendAndAwait({type: "system"}) : carHost) as {
+            model: string,
+            hostname: string,
+            os: string
+        } | null
     
         const model = carHost?.model == camHost?.model ? carHost?.model : "Unknown - Mismatch"
         const hostname = carHost?.hostname == camHost?.hostname ? carHost?.hostname : "Unknown - Mismatch"

@@ -10,10 +10,20 @@ export default function AlertNearby({camId}:{camId: string}) {
         <Button size="md" variant="flat" color="secondary" onClick={()=>{
             setAlerting(true);
             const ws = new WebSocket(`/api/v1/user/ws`);
-            ws.onopen = async () => {
-                ws.send(JSON.stringify({type: "alert", id: camId}));
-            }
-            ws.onmessage = () => {
+            ws.onmessage = (m) => {
+                let data;
+                try {
+                    data = JSON.parse(m.data);
+                } catch (error) {
+                    console.warn(`Error parsing message: ${error}`);
+                    return;
+                }
+
+                if (data && data.type === "ready") {
+                    return ws.send(JSON.stringify({type: "alert", id: camId}));
+                }
+
+
                 ws.close();
                 setAlerting(false);
             }

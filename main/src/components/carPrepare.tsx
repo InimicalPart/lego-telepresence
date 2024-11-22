@@ -20,9 +20,7 @@ export default function CarPrepare({
     useEffect(()=>{
         const ws = new WebSocket(`${location.origin.replace("http", "ws")}/api/v1/user/ws`);
         ws.onopen = () => {
-            setMessage("Checking if car is online...");
-            ws.send(JSON.stringify({type: "query", id: carID, query: "status"}));
-
+            setMessage("Waiting for server to confirm that it is ready for conversation...")
         }
         ws.onmessage = async (message) => {
             let data;
@@ -35,6 +33,9 @@ export default function CarPrepare({
 
 
             switch (data.type) {
+                case "ready":
+                    setMessage("Checking if car is online...");
+                    ws.send(JSON.stringify({type: "query", id: carID, query: "status"}));
                 case "status":
                     if (data.connId == carID) {
                         if (!data.connected) {

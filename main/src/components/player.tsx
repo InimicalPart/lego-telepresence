@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, useEffect, useState } from "react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
 import MpegTSVideo from "./mpegts-video";
 
 export default function Player({
@@ -24,19 +24,16 @@ export default function Player({
 
     const [isStreaming, setStreaming] = useState(false)
     const [url, setUrl] = useState("");
-    const [checkTimer, setCheckTimer] = useState<NodeJS.Timeout | null>(null);
     const [restartPending, setRestartPending] = useState(false);
-    useEffect(()=>{
-        if (!cameraId) return;
-        const ws = new WebSocket(`${location.origin.replace("http", "ws")}/api/v1/user/ws`);
-        ws.onopen = () => {
-            ws.send(JSON.stringify({type: "query", id: cameraId, query: "status"}));
+    const ws = useRef<WebSocket | null>(null);
+    const checkTimer = useRef<NodeJS.Timeout | null>(null);
 
-            setCheckTimer(setInterval(()=>{
-                if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({type: "query", id: cameraId, query: "status"}));
-            },30000))
-        }
-        ws.onmessage = (message) => {
+    useEffect(()=>{
+        if (!ws.current || (ws.current.readyState != ws.current.OPEN && ws.current.readyState != ws.current.CONNECTING))
+            ws.current = new WebSocket(`${location.origin.replace("http", "ws")}/api/v1/user/ws`);
+        if (!cameraId) return;
+        ws.current.onmessage = (message) => {
+            if (!ws.current) return; 
             let data;
             try {
                 data = JSON.parse(message.data);
@@ -44,14 +41,23 @@ export default function Player({
                 console.warn(`Error parsing message: ${error}`);
                 return;
             }
-            if (data.type === "streaming") {
+
+            if (data.type === "ready") {
+                ws.current.send(JSON.stringify({type: "query", id: cameraId, query: "status"}));
+
+                checkTimer.current = setInterval(()=>{
+                    if (ws.current && ws.current.readyState === ws.current.OPEN) ws.current.send(JSON.stringify({type: "query", id: cameraId, query: "status"}));
+                },30000)
+            } else if (data.type === "streaming") {
                 setStreaming(data.streaming ?? false);
             } else if (data.type === "getInfo") {
-                setUrl(`${location.protocol.replace("http","ws")}//${location.hostname}:8000/remote-live/${data.ssid.replace(/ /g, "_")}.flv`)
+                setUrl(`${location.protocol.replace("http","ws")}//${location.hostname}:8000/remotelive/${data.ssid.replace(/ /g, "_")}.flv`)
             } else if (data.type === "status") {
                 if (data.connected) {
-                    if (url == "") ws.send(JSON.stringify({type: "query", id: cameraId, query: "getInfo"}));
-                    ws.send(JSON.stringify({type: "query", id: cameraId, query: "streaming"}));
+                    if (ws.current) {
+                        if (url == "") ws.current.send(JSON.stringify({type: "query", id: cameraId, query: "getInfo"}));
+                        ws.current.send(JSON.stringify({type: "query", id: cameraId, query: "streaming"}));
+                    }
                 }
             }
         }
@@ -68,13 +74,13 @@ export default function Player({
 
 
         return () => {
-            if (ws.readyState === ws.OPEN) ws.close();
-            if (checkTimer) clearInterval(checkTimer);
+            if (ws.current && ws.current.readyState === ws.current.OPEN) ws.current.close();
+            if (checkTimer.current) clearInterval(checkTimer.current);
 
             window.removeEventListener("LTP-PLAYER-RESTART-PENDING", onRestartPending)
             window.removeEventListener("LTP-RESTART-STREAM", onRestart)
         }
-    },[cameraId, checkTimer, url])
+    },[cameraId, checkTimer, ws, url])
 
 
 

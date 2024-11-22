@@ -21,18 +21,20 @@
 
 import { config } from "dotenv";
 import { parse } from "jsonc-parser";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import axios from "axios";
 import path from "path";
 import { WebSocket } from "ws";
 import CarClient from "./lib/car.js";
 import si from "systeminformation";
 import performance from "./lib/performance.js";
-
+import * as jose from "jose"
 declare const global: CarClientGlobal;
 
 
-global.config = parse(readFileSync("./config.jsonc", { encoding: "utf-8" }));
+const isDev = existsSync("./config-dev.jsonc")
+
+global.config = parse(readFileSync(isDev?"./config-dev.jsonc":"./config.jsonc", { encoding: "utf-8" }));
 let isConnected = false;
 
 if (global.config.DEVELOPMENT) {
@@ -50,11 +52,13 @@ const car = new CarClient(global.config.TECHNIC_MAC, true);
 
 let socket: WebSocket;
 let busy = false;
-car.events.on("ready", () => {
+let connAPIKey: string;
+car.events.on("ready", async () => {
     console.log("Car ready");
     isConnected = true;
     if (!socket || socket.readyState !== WebSocket.OPEN) {
-        socket = new WebSocket(process.env.WS_URL);
+        connAPIKey = await generateAccessoryAPIKey();
+        socket = new WebSocket(process.env.WS_URL, { headers: {authorization: "Bearer " + connAPIKey}});
         registerHandlers();
     }
 })
@@ -75,6 +79,19 @@ async function onConnectionFailed(error) {
     await car.connect().catch(onConnectionFailed)
 }
 
+async function generateAccessoryAPIKey() {
+    return await new jose.SignJWT({type:"car"})
+    .setProtectedHeader({
+        alg: 'HS256'
+    })
+    .setIssuedAt()
+    .setIssuer('inimi:ltp-accessory')
+    .setAudience('inimi:ltp-accessory')
+    .sign(new TextEncoder().encode(
+        process.env.ACCESSORY_SECRET ?? "8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00d"
+    ));
+}
+
 function registerHandlers() {
     socket.on("open", () => {
         console.log("Connected to WebSocket server");
@@ -83,8 +100,9 @@ function registerHandlers() {
     socket.on("error", (error) => {
         console.error(error);
         console.log("Reconnecting in 30 seconds...");
-        setTimeout(() => {
-            socket = new WebSocket(process.env.WS_URL);
+        setTimeout(async () => {
+            connAPIKey = await generateAccessoryAPIKey();
+            socket = new WebSocket(process.env.WS_URL, { headers: {authorization: "Bearer " + connAPIKey}});
         }, 30000);
     })
 
@@ -93,8 +111,9 @@ function registerHandlers() {
         const willReconnect = code !== 1000 && reason.toString("utf-8") !== "Car disconnected from client";
         console.log(`Connection closed: ${code} ${reason}.${willReconnect ? " Reconnecting in 30 seconds..." : ""}`);
         if (willReconnect) {
-            setTimeout(() => {
-                socket = new WebSocket(process.env.WS_URL);
+            setTimeout(async () => {
+                connAPIKey = await generateAccessoryAPIKey();
+                socket = new WebSocket(process.env.WS_URL, { headers: {authorization: "Bearer " + connAPIKey}});
             }, 30000);
         }
     })
