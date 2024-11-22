@@ -109,15 +109,12 @@ function registerHandlers() {
 
     socket.on("close", (code, reason) => {
 
-        const willReconnect = code !== 1000 && reason.toString("utf-8") !== "Camera disconnected from client";
-        console.log(`Connection closed: ${code} ${reason}.${willReconnect ? " Reconnecting in 30 seconds..." : ""}`);
-        if (willReconnect) {
-            setTimeout(async () => {
-                connAPIKey = await generateAccessoryAPIKey();
-                socket = new WebSocket(process.env.WS_URL, { headers: {authorization: "Bearer " + connAPIKey}});
-                registerHandlers();
-            }, 30000);
-        }
+        console.log(`Connection closed: ${code} ${reason}. Reconnecting in 30 seconds...`);
+        setTimeout(async () => {
+            connAPIKey = await generateAccessoryAPIKey();
+            socket = new WebSocket(process.env.WS_URL, { headers: {authorization: "Bearer " + connAPIKey}});
+            registerHandlers();
+        }, 30000);
     })
 
     socket.on("message", parseMessage);
