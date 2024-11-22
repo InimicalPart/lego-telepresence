@@ -1,5 +1,5 @@
 import { LTPGlobal } from '@/interfaces/global';
-import { generateWSID, InimizedWS, inimizeWSClient } from '@/utils/ws';
+import { generateWSID, InimizedWS, inimizeWSClient, validateAccessoryAPI } from '@/utils/ws';
 import { notFound } from 'next/navigation';
 
 declare const global: LTPGlobal;
@@ -7,9 +7,21 @@ declare const global: LTPGlobal;
 export async function GET(){return notFound()}
 
 export async function SOCKET(
-    client: InimizedWS
+    client: InimizedWS,
+    request: import('http').IncomingMessage
   ) {
     client = await inimizeWSClient(client);
+    //! Validate accessory API key
+    const key = request.headers.authorization?.replace("Bearer ", "");
+    if (!key) {
+        return client.send(JSON.stringify({status:401, error: "Unauthorized"}));
+    } else {
+        if (!await validateAccessoryAPI(key)) {
+            return client.send(JSON.stringify({status:401, error: "Unauthorized"}));
+        }
+    }
+
+    
     console.log("[WS] A camera client has connected");
     client.send(JSON.stringify({type: "identify"}));
     client.on('close', () => {

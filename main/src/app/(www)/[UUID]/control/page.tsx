@@ -12,11 +12,16 @@ import MovementControls from "@/components/buttons/movement";
 import KeyboardControlToggle from "@/components/buttons/keyboardControl";
 import FreeControlToggle from "@/components/buttons/freeControl";
 import AlertNearby from "@/components/buttons/alertNearby";
+import { JWTCheck } from "@/utils/auth/credCheck";
 
 
 declare const global: LTPGlobal;
 
 export default async function ControlPage({ params }: {params:Promise<{UUID:string}>}) {
+    //! Check if the user is logged in, if not, redirect to login page
+    const res = await JWTCheck();
+    if (res.success !== true) return res;
+
     const { UUID } = await params
     const conn = global.connections.find(conn => conn.id === UUID)
     const cam = global.connections.find(carConn => carConn.type === "cam" && carConn.cam?.serialNumber === conn?.car?.cameraSerial)

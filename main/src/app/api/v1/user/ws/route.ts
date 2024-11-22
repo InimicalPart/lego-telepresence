@@ -1,4 +1,5 @@
 import { LTPGlobal } from '@/interfaces/global';
+import { JWTCheck } from '@/utils/auth/credCheck';
 import { getRtmpUrl } from '@/utils/rtmp';
 import { InimizedWS, inimizeWSClient } from '@/utils/ws';
 import { notFound } from 'next/navigation';
@@ -8,8 +9,14 @@ declare const global: LTPGlobal;
 export async function GET(){return notFound()}
 
 export async function SOCKET(
-    client: InimizedWS
+    client: InimizedWS,
+    request: import('http').IncomingMessage
   ) {
+
+    const cookie = request.headers.cookie;
+    const res = await JWTCheck(true, cookie)
+    if (res.success !== true) return client.send(JSON.stringify({status:401, error: "Unauthorized"}));
+
     client = await inimizeWSClient(client);
     console.log("[WS] A user client has connected");
     client.on('close', () => {
@@ -60,7 +67,7 @@ export async function SOCKET(
                     return client.send(JSON.stringify({error: "Invalid query", connId, nonce}));
                 }
 
-                conn.connection.sendAndAwait({type: query}).then((response: {[key:string]:string|number|boolean|{[key:string]:string|number|boolean}}) => {
+                conn.connection.sendAndAwait({type: query}).then((response: any) => {
                     client.send(JSON.stringify({...response, connId, nonce}));
                 }).catch((error: string) => {
                     console.log(`[WS] Error sending query "${query}": ${error}`);
@@ -73,7 +80,7 @@ export async function SOCKET(
                     return client.send(JSON.stringify({error: "Connection is not a camera"}));
                 }
 
-                conn.connection.sendAndAwait({type: "wake"},120000).then((response: {[key:string]:string|number|boolean|{[key:string]:string|number|boolean}}) => {
+                conn.connection.sendAndAwait({type: "wake"},120000).then((response: any) => {
                     client.send(JSON.stringify({...response, connId, nonce}));
                 }).catch((error: string) => {
                     console.log(`[WS] Error sending 'wake': ${error}`);
@@ -99,7 +106,7 @@ export async function SOCKET(
                 await sleep(5000)
             
             case "connectToWiFi":
-                await conn.connection.sendAndAwait({type: "connectToWiFi"}, 30000).then((response: {[key:string]:string|number|boolean|{[key:string]:string|number|boolean}}) => {
+                await conn.connection.sendAndAwait({type: "connectToWiFi"}, 30000).then((response: any) => {
                     if (response.error) {
                         console.log(`[WS] Error sending 'connectToWiFi': ${response.error}`);
                         client.send(JSON.stringify({error: "Error sending 'connectToWiFi'", connId, nonce}));
@@ -125,7 +132,7 @@ export async function SOCKET(
                     encode: false,
                     windowSize: "WINDOW_SIZE_480",
                     lens: "LENS_SUPERVIEW"
-                }}, 45000).then((response: {[key:string]:string|number|boolean|{[key:string]:string|number|boolean}}) => {
+                } as any}, 45000).then((response: any) => {
                     if (conn.cam) conn.cam.isLive = true;
                     client.send(JSON.stringify({...response, connId, nonce}));
                 }).catch((error: string) => {
@@ -139,7 +146,7 @@ export async function SOCKET(
                     return client.send(JSON.stringify({error: "Connection is not a camera"}));
                 }
 
-                conn.connection.sendAndAwait({type: "claimControl", external: data.external ?? true}, 30000).then((response: {[key:string]:string|number|boolean|{[key:string]:string|number|boolean}}) => {
+                conn.connection.sendAndAwait({type: "claimControl", external: data.external ?? true}, 30000).then((response: any) => {
                     client.send(JSON.stringify({...response, connId, nonce}));
                 }).catch((error: string) => {
                     console.log(`[WS] Error sending 'claimControl': ${error}`);
@@ -152,7 +159,7 @@ export async function SOCKET(
                     return client.send(JSON.stringify({error: "Connection is not a camera"}));
                 }
 
-                conn.connection.sendAndAwait({type: "stabilization", enabled: data.enabled ?? true}, 30000).then((response: {[key:string]:string|number|boolean|{[key:string]:string|number|boolean}}) => {
+                conn.connection.sendAndAwait({type: "stabilization", enabled: data.enabled ?? true}, 30000).then((response: any) => {
                     client.send(JSON.stringify({...response, connId, nonce}));
                 }).catch((error: string) => {
                     console.log(`[WS] Error sending 'stabilization': ${error}`);
@@ -195,7 +202,7 @@ export async function SOCKET(
                     return client.send(JSON.stringify({error: "Connection is not a camera"}));
                 }
 
-                conn.connection.sendAndAwait({type: "alert", message: data.message}, 30000).then((response: {[key:string]:string|number|boolean|{[key:string]:string|number|boolean}}) => {
+                conn.connection.sendAndAwait({type: "alert", message: data.message}, 30000).then((response: any) => {
                     client.send(JSON.stringify({...response, connId, nonce}));
                 }).catch((error: string) => {
                     console.log(`[WS] Error sending 'alert': ${error}`);
@@ -210,6 +217,7 @@ export async function SOCKET(
         }
 
     })
+    client.send(JSON.stringify({type: "ready"}));
   }
 
 async function sleep(ms: number) {

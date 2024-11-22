@@ -11,11 +11,19 @@ export default function RestartStream({camId}:{camId: string}) {
             setRestarting(true);
             window.dispatchEvent(new CustomEvent("LTP-PLAYER-RESTART-PENDING"));
             const ws = new WebSocket(`/api/v1/user/ws`);
-            ws.onopen = async () => {
-                ws.send(JSON.stringify({type: "restartStream", id: camId}));
-            }
+            ws.onmessage = async (m) => {
+                let data;
+                try {
+                    data = JSON.parse(m.data);
+                } catch (error) {
+                    console.warn(`Error parsing message: ${error}`);
+                    return;
+                }
 
-            ws.onmessage = async () => {
+                if (data && data.type === "ready") {
+                    return ws.send(JSON.stringify({type: "restartStream", id: camId}));
+                }
+
                 setRestarting(false);
                 ws.close()
                 setTimeout(() => {

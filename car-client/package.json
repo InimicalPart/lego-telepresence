@@ -12,6 +12,7 @@
     "dotenv": "^16.4.5",
     "inimi-ble": "github:InimicalPart/inimi-ble",
     "inimi-poweredup": "github:InimicalPart/inimi-poweredup",
+    "jose": "^5.9.6",
     "jsonc-parser": "^3.3.1",
     "node-global-key-listener": "^0.3.0",
     "systeminformation": "^5.23.5",

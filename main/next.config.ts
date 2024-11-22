@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     distDir: "build",
     experimental: {
         serverActions: {
-            allowedOrigins: ["carmeet.newseed.se", "localhost"],
+            allowedOrigins: ["legomeet.newseed.se", "localhost"],
         },
     },
     poweredByHeader: false,

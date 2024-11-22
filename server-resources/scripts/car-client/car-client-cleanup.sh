@@ -11,7 +11,7 @@ fi
 
 
 #! Check if the car-client service exists
-CAR-CLIENT_EXISTS=`sshpass -P passphrase -p "$CAR_CLIENT_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $CAR_CLIENT_UPLOAD_USERNAME $CAR_CLIENT_UPLOAD_HOST "echo \"$CAR_CLIENT_UPLOAD_PASSWORD\" | sudo -S systemctl status car-client >/dev/null 2>&1; echo \\\$?"`
+CAR_CLIENT_EXISTS=`sshpass -P passphrase -p "$CAR_CLIENT_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $CAR_CLIENT_UPLOAD_USERNAME $CAR_CLIENT_UPLOAD_HOST "echo \"$CAR_CLIENT_UPLOAD_PASSWORD\" | sudo -S systemctl status car-client >/dev/null 2>&1; echo \\\$?"`
 
 if [ "$CAR_CLIENT_EXISTS" -eq 0 ]; then
     echo "[CAR-CLIENT] Car Client service exists on $CAR_CLIENT_UPLOAD_HOST"
@@ -28,7 +28,7 @@ fi
 #! Copy over $SD/sudoers/car-client-access to /etc/sudoers.d/car-client-access on $CAR_CLIENT_UPLOAD_HOST as sudo
 echo "[CAR-CLIENT] Removing sudoers file from $CAR_CLIENT_UPLOAD_HOST"
 SUDOERS_CONTENT=`cat $SCRIPT_DIR/sudoers/car-client-access | base64`
-sshpass -P passphrase -p "$CAR_CLIENT_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $CAR_CLIENT_UPLOAD_USERNAME $CAR_CLIENT_UPLOAD_HOST "echo \"$CAR_CLIENT_UPLOAD_PASSWORD\" | sudo -S sh -c 'rm -rf /etc/sudoers.d/car-client-access > /dev/null 2>&1"
+sshpass -P passphrase -p "$CAR_CLIENT_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $CAR_CLIENT_UPLOAD_USERNAME $CAR_CLIENT_UPLOAD_HOST "echo \"$CAR_CLIENT_UPLOAD_PASSWORD\" | sudo -S sh -c 'rm -rf /etc/sudoers.d/car-client-access' > /dev/null 2>&1"
 
 #! Copy over $SCRIPT_DIR/services/car-client.service to /etc/systemd/system/car-client.service on $CAR_CLIENT_UPLOAD_HOST as sudo and symlink it to /lib/systemd/system/car-client.service
 echo "[CAR-CLIENT] Removing systemd service file from $CAR_CLIENT_UPLOAD_HOST"

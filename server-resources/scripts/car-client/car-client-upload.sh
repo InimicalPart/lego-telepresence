@@ -12,6 +12,7 @@ fi
 EXCLUDE=(
     ".history"
     "package-lock.json"
+    "config-dev.jsonc"
 )
 
 #* vv Credit https://stackoverflow.com/a/17841619

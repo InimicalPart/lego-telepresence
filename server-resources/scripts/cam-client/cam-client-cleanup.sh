@@ -11,7 +11,7 @@ fi
 
 
 #! Check if the cam-client service exists
-CAM-CLIENT_EXISTS=`sshpass -P passphrase -p "$CAM_CLIENT_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $CAM_CLIENT_UPLOAD_USERNAME $CAM_CLIENT_UPLOAD_HOST "echo \"$CAM_CLIENT_UPLOAD_PASSWORD\" | sudo -S systemctl status cam-client >/dev/null 2>&1; echo \\\$?"`
+CAM_CLIENT_EXISTS=`sshpass -P passphrase -p "$CAM_CLIENT_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $CAM_CLIENT_UPLOAD_USERNAME $CAM_CLIENT_UPLOAD_HOST "echo \"$CAM_CLIENT_UPLOAD_PASSWORD\" | sudo -S systemctl status cam-client >/dev/null 2>&1; echo \\\$?"`
 
 if [ "$CAM_CLIENT_EXISTS" -eq 0 ]; then
     echo "[CAM-CLIENT] Cam Client service exists on $CAM_CLIENT_UPLOAD_HOST"
@@ -28,7 +28,7 @@ fi
 #! Copy over $SD/sudoers/cam-client-access to /etc/sudoers.d/cam-client-access on $CAM_CLIENT_UPLOAD_HOST as sudo
 echo "[CAM-CLIENT] Removing sudoers file from $CAM_CLIENT_UPLOAD_HOST"
 SUDOERS_CONTENT=`cat $SCRIPT_DIR/sudoers/cam-client-access | base64`
-sshpass -P passphrase -p "$CAM_CLIENT_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $CAM_CLIENT_UPLOAD_USERNAME $CAM_CLIENT_UPLOAD_HOST "echo \"$CAM_CLIENT_UPLOAD_PASSWORD\" | sudo -S sh -c 'rm -rf /etc/sudoers.d/cam-client-access > /dev/null 2>&1"
+sshpass -P passphrase -p "$CAM_CLIENT_UPLOAD_PASSWORD" ssh $ADDITIONAL_CMD -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -l $CAM_CLIENT_UPLOAD_USERNAME $CAM_CLIENT_UPLOAD_HOST "echo \"$CAM_CLIENT_UPLOAD_PASSWORD\" | sudo -S sh -c 'rm -rf /etc/sudoers.d/cam-client-access' > /dev/null 2>&1"
 
 #! Copy over $SCRIPT_DIR/services/cam-client.service to /etc/systemd/system/cam-client.service on $CAM_CLIENT_UPLOAD_HOST as sudo and symlink it to /lib/systemd/system/cam-client.service
 echo "[CAM-CLIENT] Removing systemd service file from $CAM_CLIENT_UPLOAD_HOST"

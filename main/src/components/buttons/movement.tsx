@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Kbd, Slider } from "@nextui-org/react";
-import { FormEventHandler, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Joystick, JoystickShape } from 'react-joystick-component';
 
 export default function MovementControls({carId}:{carId: string}) {
@@ -11,10 +11,17 @@ export default function MovementControls({carId}:{carId: string}) {
     const [sliderValue, setSliderValue] = useState<number>(0);
     const [sliderValue2, setSliderValue2] = useState<number>(0);
     const ws = useMemo<WebSocket>(()=>new WebSocket(`/api/v1/user/ws`), []);
-
+    const [wsReady, setWsReady] = useState(false);
 
     useEffect(() => {
 
+        ws.onopen = () => {
+            setWsReady(true);
+        }
+
+        ws.onclose = () => {
+            setWsReady(false);
+        }
 
         function onKeyboardControlUpdate(data: CustomEvent) {
             setKeyboardControl(data.detail.value)
@@ -57,31 +64,25 @@ export default function MovementControls({carId}:{carId: string}) {
         freeControl ? <div className="p-10 flex flex-row justify-center items-center gap-52">
             <div className="flex flex-row justify-center items-center gap-5">
 
-            <Slider size="md" className="w-80" aria-label="ok" minValue={-100} defaultValue={0}
-            //@ts-expect-error - fillOffset is not in the SliderProps even though it is in the source code
-            fillOffset={0}
-            maxValue={100} step={10} onChange={((value: number) => {
+            <Slider isDisabled={!wsReady} size="md" className="w-80" aria-label="ok" minValue={-100} defaultValue={0} fillOffset={0} maxValue={100} step={10} onChange={((value: number) => {
                 if (value === sliderValue) return;
                 ws.send(JSON.stringify({type: "setWheelAngle", id: carId, angle: value}));
                 setSliderValue(value);
-            }) as unknown as FormEventHandler<HTMLDivElement>} onChangeEnd={()=>{
+            }) as any} onChangeEnd={()=>{
                 ws.send(JSON.stringify({type: "setWheelAngle", id: carId, angle: 0}));
                 setSliderValue(0);
             }}/>
 
-        <Slider size="md" className="h-80" aria-label="ok" orientation="vertical" minValue={-100} defaultValue={0}
-            //@ts-expect-error - fillOffset is not in the SliderProps even though it is in the source code
-            fillOffset={0}
-            maxValue={100} step={10} onChange={((value: number) => {
+        <Slider isDisabled={!wsReady} size="md" className="h-80" aria-label="ok" orientation="vertical" minValue={-100} defaultValue={0} fillOffset={0} maxValue={100} step={10} onChange={((value: number) => {
                 if (value === sliderValue2) return;
                 ws.send(JSON.stringify({type: "setSpeed", id: carId, amount: value}));
                 setSliderValue2(value);
-            }) as unknown as FormEventHandler<HTMLDivElement>} onChangeEnd={()=>{
+            }) as any} onChangeEnd={()=>{
                 ws.send(JSON.stringify({type: "setSpeed", id: carId, amount: 0}));
                 setSliderValue2(0);
             }}/>
             </div>
-            <Joystick size={100} throttle={0} baseShape={JoystickShape.Square} stickShape={JoystickShape.Square} baseColor="black" stickColor="red" move={(a)=>{console.log(a); ws.send(JSON.stringify({...a, id:carId}))}} stop={(a)=>{console.log(a);ws.send(JSON.stringify({...a, id:carId}))}} />
+            <Joystick disabled={!wsReady} size={100} throttle={0} baseShape={JoystickShape.Square} stickShape={JoystickShape.Square} baseColor="black" stickColor="red" move={(a)=>{console.log(a); ws.send(JSON.stringify({type:a.type, x:a.x,y:a.y, id:carId}))}} stop={(a)=>{console.log(a);ws.send(JSON.stringify({...a, id:carId}))}} />
         </div> :
         <>
             <div className="flex flex-wrap max-w-min gap-2">

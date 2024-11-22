@@ -4,4 +4,5 @@ node_modules
 .env.*
 !.env.template
 config.jsonc
+config-dev.jsonc
 src/lib/sample.ts

@@ -21,18 +21,20 @@
 
 import { config } from "dotenv";
 import { parse } from "jsonc-parser";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import axios from "axios";
 import path from "path";
 import { WebSocket } from "ws";
 import GoProClient from "./lib/gopro.js";
 import si from "systeminformation"
 import { execSync } from "child_process";
-
+import * as jose from "jose"
 declare const global: CamClientGlobal;
 
 
-global.config = parse(readFileSync("./config.jsonc", { encoding: "utf-8" }));
+const isDev = existsSync("./config-dev.jsonc")
+
+global.config = parse(readFileSync(isDev?"./config-dev.jsonc":"./config.jsonc", { encoding: "utf-8" }));
 let isConnected = false;
 
 let isBusy = false;
@@ -54,12 +56,14 @@ let keepAliveInterval: NodeJS.Timeout = setInterval(()=>{
     }
 }, 3000);
 let socket: WebSocket;
+let connAPIKey: string;
 
-camera.events.on("ready", () => {
+camera.events.on("ready", async () => {
     console.log("Camera ready");
     isConnected = true;
     if (!socket || socket.readyState !== WebSocket.OPEN) {
-        socket = new WebSocket(process.env.WS_URL);
+        connAPIKey = await generateAccessoryAPIKey();
+        socket = new WebSocket(process.env.WS_URL, { headers: {authorization: "Bearer " + connAPIKey}});
         registerHandlers();
     }
 })
@@ -76,7 +80,18 @@ camera.events.on("disconnect", (data) => {
 await camera.connect();
 
 
-
+async function generateAccessoryAPIKey() {
+    return await new jose.SignJWT({type:"cam"})
+    .setProtectedHeader({
+        alg: 'HS256'
+    })
+    .setIssuedAt()
+    .setIssuer('inimi:ltp-accessory')
+    .setAudience('inimi:ltp-accessory')
+    .sign(new TextEncoder().encode(
+        process.env.ACCESSORY_SECRET ?? "8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00db105f00d0d15ea5e8badf00d"
+    ));
+}
 
 function registerHandlers() {
     socket.on("open", () => {
@@ -86,8 +101,9 @@ function registerHandlers() {
     socket.on("error", (error) => {
         console.error(error);
         console.log("Reconnecting in 30 seconds...");
-        setTimeout(() => {
-            socket = new WebSocket(process.env.WS_URL);
+        setTimeout(async () => {
+            connAPIKey = await generateAccessoryAPIKey();
+            socket = new WebSocket(process.env.WS_URL, { headers: {authorization: "Bearer " + connAPIKey}});
         }, 30000);
     })
 
@@ -96,8 +112,9 @@ function registerHandlers() {
         const willReconnect = code !== 1000 && reason.toString("utf-8") !== "Camera disconnected from client";
         console.log(`Connection closed: ${code} ${reason}.${willReconnect ? " Reconnecting in 30 seconds..." : ""}`);
         if (willReconnect) {
-            setTimeout(() => {
-                socket = new WebSocket(process.env.WS_URL);
+            setTimeout(async () => {
+                connAPIKey = await generateAccessoryAPIKey();
+                socket = new WebSocket(process.env.WS_URL, { headers: {authorization: "Bearer " + connAPIKey}});
             }, 30000);
         }
     })
