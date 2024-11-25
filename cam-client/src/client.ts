@@ -137,6 +137,7 @@ async function parseMessage(message: string) {
         isBusy = false;
     } catch (error) {
         console.warn(`Error parsing message: ${error}`);
+        isBusy = false;
     }
 }
 

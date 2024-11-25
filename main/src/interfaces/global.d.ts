@@ -22,10 +22,24 @@ interface LTPGlobal extends NodeJS.Global {
                 firmwareVersion: string,
                 hardwareVersion: string,
                 cameraSerial: string,
+                inControlBy: null | string,
+                coolingDown: boolean,
+            },
+            system?: {
+                model: string,
+                hostname: string,
+                os: string
             },
             ready: boolean,
             connection: InimizedWS,
         }[],
     rtmpSecret: string,
-    events: EventEmitter
+    events: EventEmitter,
+    eventRegistrars: {
+        [key: string]: {
+            event: string,
+            callback: (...args: any[]) => void
+        }[]
+    },
+    validEvents: stirng[]
 } 

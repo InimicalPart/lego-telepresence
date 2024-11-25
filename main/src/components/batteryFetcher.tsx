@@ -93,7 +93,7 @@ export default function BatteryFetcher({
                 <div>
                     {
                         sleeping === true ? <Sleeping size={size}/> :
-                        connected === false ? <X size={size}/> :
+                        connected === false ? <X size={size} color={"darkred"}/> :
                         battery === -1 ? <QuestionMark size={size}/> :
                         battery > 75 ? <Battery.FULL size={size}/> :
                         battery > 50 ? <Battery.THREE_QUARTERS size={size}/> :

@@ -1,5 +1,5 @@
 import RestartStream from "@/components/buttons/restartStream";
-import CarPrepare from "@/components/carPrepare";
+import CarPrepare from "@/components/carPrepareControl";
 import { Car } from "@/components/icons";
 import { LTPGlobal } from "@/interfaces/global";
 import { Button, Card, CardBody, CardHeader, Divider, Link, Spacer, Tooltip } from "@nextui-org/react";
