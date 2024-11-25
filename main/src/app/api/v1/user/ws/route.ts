@@ -1,7 +1,7 @@
 import { LTPGlobal } from '@/interfaces/global';
 import { JWTCheck } from '@/utils/auth/credCheck';
 import { getRtmpUrl } from '@/utils/rtmp';
-import { InimizedWS, inimizeWSClient } from '@/utils/ws';
+import { generateWSID, InimizedWS, inimizeWSClient } from '@/utils/ws';
 import { notFound } from 'next/navigation';
 
 declare const global: LTPGlobal;
@@ -15,15 +15,43 @@ export async function SOCKET(
 
     const cookie = request.headers.cookie;
     const res = await JWTCheck(true, cookie)
-    if (res.success !== true) return client.send(JSON.stringify({status:401, error: "Unauthorized"}));
+    if (res.success !== true) return client.send(JSON.stringify({ status: 401, error: "Unauthorized" }));
 
     client = await inimizeWSClient(client);
     console.log("[WS] A user client has connected");
+    const uID = await generateWSID("user-")
     client.on('close', () => {
         const index = global.connections.findIndex(conn => conn.connection === client);
         if (index !== -1) {
             global.connections.splice(index, 1);
         }
+
+        // If any car is in control by this user, remove the control
+        global.connections.filter(conn => !!conn.car).forEach(async car => {
+            if (!car.car) return;
+            if (car.car.inControlBy === uID) {
+                car.car.inControlBy = null;
+                car.car.coolingDown = true;
+                global.events.emit("carUnclaimed", {id: car.id});
+                global.events.emit("accessoryCoolingDown", {id: car.id});
+                console.log(`[WS] Car unclaimed by user: ${car.id}`);
+                // If camera is live, stop the broadcast
+                await global.connections.filter(conn => !!conn.cam).find(cam => cam.cam?.serialNumber === car.car?.cameraSerial)?.connection.sendAndAwait({type: "stopBroadcast"});
+                // Make the camera sleep
+                await global.connections.filter(conn => !!conn.cam).find(cam => cam.cam?.serialNumber === car.car?.cameraSerial)?.connection.sendAndAwait({type: "sleep"});
+
+                // Wait for 5 seconds
+                sleep(5000).then(() => {
+                    if (car.car) {
+                        car.car.coolingDown = false;
+                    }
+                    global.events.emit("accessoryCoolingDownComplete", {id: car.id});
+                })
+
+            }
+        })
+
+        if (global.eventRegistrars[uID]) delete global.eventRegistrars[uID];
         console.log(`[WS] User disconnected`);
         return
     })
@@ -36,15 +64,108 @@ export async function SOCKET(
             return;
         }
 
+        const nonce = data.nonce ?? null;
+
+
+        switch (data.type) {
+            case "register":
+                if (!data.event && !data.events) {
+                    console.log(`[WS] User attempted to register for an event without specifying an event`);
+                    return client.send(JSON.stringify({error: "Event not specified", nonce}));
+                }
+
+                if (data.event && typeof data.event != "string") {
+                    console.log(`[WS] User attempted to register for an event with an invalid event type: ${typeof data.event}`);
+                    return client.send(JSON.stringify({error: "Invalid event type", nonce}));
+                } else if (data.events && !Array.isArray(data.events)) {
+                    console.log(`[WS] User attempted to register for events with an invalid events type: ${typeof data.events}`);
+                    return client.send(JSON.stringify({error: "Invalid events type", nonce}));
+                }
+
+
+                let eventsToRegister = data.events ?? [data.event];
+                if (data.events && data.event) {
+                    eventsToRegister.push(data.event);
+                }
+                eventsToRegister = Array.from(new Set(eventsToRegister));
+
+                eventsToRegister.forEach((event: string) => {
+                    if (!global.validEvents.includes(event)) {
+                        console.log(`[WS] User attempted to register for an invalid event: ${event}`);
+                        return client.send(JSON.stringify({error: "Invalid event", nonce}));
+                    }
+
+                    if (global.eventRegistrars[uID]?.some(reg => reg.event === event)) {
+                        console.log(`[WS] User attempted to register for an event they are already registered for: ${event}`);
+                        return client.send(JSON.stringify({error: "Already registered for event", nonce}));
+                    }
+
+                    if (!global.eventRegistrars[uID]) global.eventRegistrars[uID] = [];
+
+                    global.eventRegistrars[uID].push({event, callback: client.send});
+                    console.log(`[WS] User registered for event: ${event}`);
+                })
+                client.send(JSON.stringify({type: "registered", events: eventsToRegister, nonce}));
+                return;
+            case "unregister":
+                if (!data.event && !data.events) {
+                    console.log(`[WS] User attempted to register for an event without specifying an event`);
+                    return client.send(JSON.stringify({error: "Event not specified", nonce}));
+                }
+
+                if (data.event && typeof data.event != "string") {
+                    console.log(`[WS] User attempted to register for an event with an invalid event type: ${typeof data.event}`);
+                    return client.send(JSON.stringify({error: "Invalid event type", nonce}));
+                } else if (data.events && !Array.isArray(data.events)) {
+                    console.log(`[WS] User attempted to register for events with an invalid events type: ${typeof data.events}`);
+                    return client.send(JSON.stringify({error: "Invalid events type", nonce}));
+                }
+
+
+                let eventsToUnregister = data.events ?? [data.event];
+                if (data.events && data.event) {
+                    eventsToUnregister.push(data.event);
+                }
+                eventsToUnregister = Array.from(new Set(eventsToUnregister));
+
+                eventsToUnregister.forEach((event: string) => {
+                    if (global.eventRegistrars[uID]?.some(reg => reg.event === event)) {
+                        global.eventRegistrars[uID] = global.eventRegistrars[uID].filter(reg => reg.event !== event);
+                        console.log(`[WS] User unregistered from event: ${event}`);
+                    } else {
+                        console.log(`[WS] User attempted to unregister from an event they are not registered for: ${event}`);
+                        return client.send(JSON.stringify({error: "Not registered for event", nonce}));
+                    }
+                })
+                return client.send(JSON.stringify({type: "unregistered", events: eventsToUnregister, nonce}));
+            default:
+                break
+        }
+
         const connId = data.id;
         const conn = global.connections.find(conn => conn.id === connId)
-        const nonce = data.nonce ?? null;
         if (!conn) {
             console.log(`[WS] User requested data from non-existent connection: ${connId}`);
             return client.send(JSON.stringify({error: "Connection not found", connId, nonce}));
         }
 
         switch (data.type) {
+            case "claimControl":
+                if (!conn.car) {
+                    console.log(`[WS] User requested claimControl from non-car connection: ${connId}`);
+                    return client.send(JSON.stringify({error: "Connection is not a car"}));
+                }
+
+                if (conn.car?.inControlBy) {
+                    console.log(`[WS] User requested claimControl from car already in control: ${connId}`);
+                    return client.send(JSON.stringify({error: "Car already in control", connId, nonce}));
+                }
+
+                conn.car.inControlBy = uID;
+                console.log(`[WS] User claimed control of car: ${connId}`);
+                global.events.emit("carClaimed", {id: connId});
+                client.send(JSON.stringify({type: "claimed", connId, nonce}));
+                break;
             case "query":
                 const query = data.query;
 
@@ -56,7 +177,15 @@ export async function SOCKET(
                     }
 
                     console.log(`[WS] User requested streaming status: ${conn.cam.isLive}`);
-                    return client.send(JSON.stringify({"type": "streaming", "streaming": conn.cam.isLive, connId, nonce}));
+                    return client.send(JSON.stringify({type: "streaming", streaming: conn.cam.isLive, connId, nonce}));
+                } else if (query == "isClaimed") {
+                    if (!conn.car) {
+                        console.log(`[WS] User requested isClaimed status from non-car connection: ${connId}`);
+                        return client.send(JSON.stringify({error: "Connection is not a car", connId, nonce}));
+                    }
+
+                    console.log(`[WS] User requested isClaimed status: ${!!conn.car.inControlBy}`);
+                    return client.send(JSON.stringify({type: "isClaimed", claimed: !!conn.car.inControlBy, connId, nonce}));
                 }
 
                 const allowedQueries = conn.type=="car"?
@@ -80,7 +209,7 @@ export async function SOCKET(
                     return client.send(JSON.stringify({error: "Connection is not a camera"}));
                 }
 
-                conn.connection.sendAndAwait({type: "wake"},120000).then((response: any) => {
+                conn.connection.sendAndAwait({type: "wake"}, 120000).then((response: any) => {
                     client.send(JSON.stringify({...response, connId, nonce}));
                 }).catch((error: string) => {
                     console.log(`[WS] Error sending 'wake': ${error}`);
@@ -97,6 +226,7 @@ export async function SOCKET(
                 conn.connection.send(JSON.stringify({type: "keepAlive", enabled: data.enabled}));
                 break;
             case "restartStream":
+                global.events.emit("camStreamRestart", {id: connId});
                 // stop the broadcast with stopBroadcast, wait a few seconds, then start the broadcast with startStream, by not using the break statement, the code will continue to the next case
                 await conn.connection.sendAndAwait({type: "stopBroadcast"}).catch((error: string) => {
                     console.log(`[WS] Error sending 'stopBroadcast': ${error}`);
@@ -134,6 +264,7 @@ export async function SOCKET(
                     lens: "LENS_SUPERVIEW"
                 } as any}, 45000).then((response: any) => {
                     if (conn.cam) conn.cam.isLive = true;
+                    if (data.type == "restartStream") global.events.emit("camStreamRestartComplete", {id: connId});
                     client.send(JSON.stringify({...response, connId, nonce}));
                 }).catch((error: string) => {
                     console.log(`[WS] Error sending 'startStream': ${error}`);

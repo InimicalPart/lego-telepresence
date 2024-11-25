@@ -1,4 +1,4 @@
-import { LTPGlobal } from '@/interfaces/global';
+    import { LTPGlobal } from '@/interfaces/global';
 import { generateWSID, InimizedWS, inimizeWSClient, validateAccessoryAPI } from '@/utils/ws';
 import { notFound } from 'next/navigation';
 
@@ -23,14 +23,21 @@ export async function SOCKET(
 
 
     console.log("[WS] A car client has connected");
+    global.events.emit("accessoryPreConnect", {type: "car"});
+    global.events.emit("carPreConnect", {});
     client.send(JSON.stringify({type: "identify"}));
     client.on('close', () => {
         const index = global.connections.findIndex(conn => conn.connection === client);
+        const id = global.connections[index]?.id;
+        global.events.emit("carPreDisconnect", {id});
+        global.events.emit("accessoryPreDisconnect", {type: "car", id});
         const MAC = global.connections[index]?.car?.MACAddress.toUpperCase();
         if (index !== -1) {
             global.connections.splice(index, 1);
         }
         console.log(`[WS] Car disconnected: ${MAC}`);
+        global.events.emit("carDisconnect", {id});
+        global.events.emit("accessoryDisconnect", {type: "car", id});
         return
     })
     client.on('message', async (message: string) => {
@@ -50,19 +57,33 @@ export async function SOCKET(
                     console.log(`[WS] Car already connected: ${data.MACAddress.toUpperCase()}`);
                     return client.send(JSON.stringify({error: "Car already connected"}));
                 }
+                const connID = await generateWSID("car-")
                 global.connections.push({
-                    id: await generateWSID("car-"),
+                    id: connID,
                     type: "car",
-                    car: data,
+                    car: {...data, inControlBy: null},
                     connection: client,
                     ready: false
                 });
                 client.send(JSON.stringify({type: "connected"}));
-                console.log(`[WS] Car connected: ${data.MACAddress.toUpperCase()}`);
+                client.send(JSON.stringify({type: "system"}));
+                console.log(`[WS] Car connected: ${data.MACAddress.toUpperCase()} (${connID})`);
+                global.events.emit("accessoryConnect", {type: "car" , id: connID, data});
+                global.events.emit("carConnect", {id: connID, data});
                 break;
             case "ok":
                 console.log(`[WS] Car responded with OK`);
                 break;
+            case "system":
+                console.log(`[WS] Car responded with system info`);
+                const connection = global.connections.find(conn => conn.connection === client);
+                if (connection) {
+                    delete data.type
+                    delete data.nonce
+                    connection.system = data;
+                    global.events.emit("systemReceived", {id: connection.id, type: "car", data});
+                }
+                break
             default:
                 console.log(`[WS] Unknown message type: ${data.type}`);
                 console.log(data);

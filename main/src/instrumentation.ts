@@ -52,8 +52,54 @@ export async function register() {
     global.events.on('clientDisconnect', async (data) => {
         console.log(`Client disconnected: ${data.app}/${data.name}`);
     })
-    await setupDefUser();
+    await setupEventRegistrars()
     await setupRTMP();
+    await setupDefUser();
+}
+
+async function setupEventRegistrars() {
+    global.eventRegistrars = {}
+
+
+    global.validEvents = [
+        "accessoryPreConnect",
+        "accessoryConnect",
+        "accessoryPreDisconnect",
+        "accessoryDisconnect",
+        "carPreConnect",
+        "carConnect",
+        "carPreDisconnect",
+        "carDisconnect",
+        "camPreConnect",
+        "camConnect",
+        "camPreDisconnect",
+        "camDisconnect",
+        "systemReceived",
+        "streamConnect",
+        "streamDisconnect",
+        "clientConnect",
+        "clientDisconnect",
+        "carClaimed",
+        "carUnclaimed",
+        "camStreamRestart",
+        "camStreamRestartComplete",
+        "accessoryCoolingDown",
+        "accessoryCoolingDownComplete",
+    ]
+
+
+    for (const event of global.validEvents) {
+        global.events.on(event, (...args) => {
+            const registrars = global.eventRegistrars;
+            for (const key in registrars) {
+                registrars[key].forEach(reg => {
+                    if (reg.event === event) {
+                        reg.callback({type:event, data:args[0]});
+                    }
+                })
+            }
+        })
+    }
 }
 
 async function setupDefUser() {

@@ -99,13 +99,15 @@
     <script>
 
         const error_dictionary = {
-            404: "The page you are looking for does not exist.",
-            500: "The server encountered an error and was unable to process your request.",
-            501: "The server encountered an error and was unable to process your request.",
-            502: "The server encountered an error and was unable to process your request.",
-            503: "The server encountered an error and was unable to process your request.",
-            504: "The server encountered an error and was unable to process your request.",
-            505: "The server encountered an error and was unable to process your request.",
+            500: "The server encountered an unexpected condition which prevented it from fulfilling the request.",
+            501: "The server does not support the functionality required to fulfill the request.",
+            502: "The server received an invalid response from an upstream server while processing the request.",
+            503: "The server is currently unable to handle the request due to a temporary overloading or maintenance of the server.",
+            504: "The server did not receive a timely response from an upstream server while acting as a gateway or proxy.",
+            505: "The server does not support the HTTP protocol version used in the request.",
+            506: "The server encountered an internal error while processing the request.",
+            507: "The server is unable to store the representation needed to complete the request.",
+            508: "The server detected an infinite loop while processing the request.",
         }
 
         const statusCode = parseInt('<!--# echo var="status" -->'); // NGINX SSI (Server Side Includes) to get the status code
