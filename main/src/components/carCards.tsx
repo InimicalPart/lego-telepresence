@@ -49,68 +49,74 @@ export default function CarCards({cars: preSetCars, cams: preSetCams}:{cars?: an
                     break;
                 case "accessoryConnect":
                     if (data.data.type == "car") {
-                        setCars([...cars, {
+                        setCars(cars => ([...cars, {
                             id: data.data.id,
                             type: data.data.type,
                             car: data.data.data
-                        }])
+                        }]))
                     } else if (data.data.type == "cam") {
-                        setCams([...cams, {
+                        setCams(cams=>([...cams, {
                             id: data.data.id,
                             type: data.data.type,
                             cam: data.data.data
-                        }])
+                        }]))
                     }
                     break;
                 case "systemReceived":
                     if (data.data.type == "car") {
-                        const carToUpdate = cars.find(car => car.id == data.data.id);
-                        if (carToUpdate) {
-                            carToUpdate.system = data.data.system;
-                            setCars([...cars]);
-                        }
+                        setCars(cars=>{
+                            const carToUpdate = cars.find(car => car.id == data.data.id);
+                            if (carToUpdate) carToUpdate.system = data.data.data;
+
+                            return [...cars]
+                        })
                     } else if (data.data.type == "cam") {
-                        const camToUpdate = cams.find(cam => cam.id == data.data.id);
-                        if (camToUpdate) {
-                            camToUpdate.system = data.data.system;
-                            setCams([...cams]);
-                        }
+                        setCams(cams=>{
+                            const camToUpdate = cams.find(cam => cam.id == data.data.id);
+                            if (camToUpdate) camToUpdate.system = data.data.data;
+
+                            return [...cams]
+                        })
                     }
                     break;
                 case "accessoryDisconnect":
                     if (data.data.type == "car") {
-                        setCars(cars.filter(car => car.id != data.data.id))
+                        setCars(cars=>cars.filter(car => car.id != data.data.id))
                     } else if (data.data.type == "cam") {
-                        setCams(cams.filter(cam => cam.id != data.data.id))
+                        setCams(cams=>cams.filter(cam => cam.id != data.data.id))
                     }
                     break;
                 case "carClaimed":
-                    const carToClaim = cars.find(car => car.id == data.data.id);
-                    if (carToClaim) {
-                        carToClaim.car.inControlBy = "someone";
-                        setCars([...cars]);
-                    }
+                    setCars(cars=>{
+                        const carToClaim = cars.find(car => car.id == data.data.id);
+                        if (carToClaim) carToClaim.car.inControlBy = "someone";
+
+                        return [...cars]
+                    })
                     break;
                 case "carUnclaimed":
-                    const carToUnclaim = cars.find(car => car.id == data.data.id);
-                    if (carToUnclaim) {
-                        carToUnclaim.car.inControlBy = null;
-                        setCars([...cars]);
-                    }
+                    setCars(cars=>{
+                        const carToUnclaim = cars.find(car => car.id == data.data.id);
+                        if (carToUnclaim) carToUnclaim.car.inControlBy = null;
+
+                        return [...cars]
+                    })
                     break;
                 case "accessoryCoolingDown":
-                    const carToCoolDown = cars.find(car => car.id == data.data.id);
-                    if (carToCoolDown) {
-                        carToCoolDown.car.coolingDown = true;
-                        setCars([...cars]);
-                    }
+                    setCars(cars=>{
+                        const carToCoolDown = cars.find(car => car.id == data.data.id);
+                        if (carToCoolDown) carToCoolDown.car.coolingDown = true;
+
+                        return [...cars]
+                    })
                     break;
                 case "accessoryCoolingDownComplete":
-                    const carToCoolDownComplete = cars.find(car => car.id == data.data.id);
-                    if (carToCoolDownComplete) {
-                        carToCoolDownComplete.car.coolingDown = false;
-                        setCars([...cars]);
-                    }
+                    setCars(cars=>{
+                        const carToCoolDownComplete = cars.find(car => car.id == data.data.id);
+                        if (carToCoolDownComplete) carToCoolDownComplete.car.coolingDown = false;
+
+                        return [...cars]
+                    })
                     break;
                 default:
                     console.log(`[WS] Unknown message type: ${data.type}`);

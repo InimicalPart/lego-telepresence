@@ -235,7 +235,7 @@ async function sendOK(nonce: string) {
 
 async function getSystemOSName() {
     try {
-        return readFileSync("/etc/os-release", {encoding: "utf-8"}).match(/PRETTY_NAME="(.*)"/)[1];
+        return readFileSync("/etc/os-release", {encoding: "utf-8"})?.match(/PRETTY_NAME="(.*)"/)[1]?.trim();
     } catch (e) {
         return "Unknown";
     }
@@ -243,10 +243,10 @@ async function getSystemOSName() {
  
 async function getModel() {
     try {
-        return readFileSync("/proc/device-tree/model", {encoding: "utf-8"});
+        return readFileSync("/proc/device-tree/model", {encoding: "utf-8"})?.trim();
     } catch (e) {
         try {
-            return (await si.system()).model;
+            return (await si.system()).model?.trim();
         } catch (e) {
             return "Unknown";
         }   
@@ -255,7 +255,7 @@ async function getModel() {
 
 async function getHostname() {
     try {
-        return readFileSync("/etc/hostname", {encoding: "utf-8"});
+        return readFileSync("/etc/hostname", {encoding: "utf-8"})?.trim();
     } catch (e) {
         return "Unknown";
     }

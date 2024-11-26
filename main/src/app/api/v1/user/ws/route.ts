@@ -41,13 +41,13 @@ export async function SOCKET(
                 await global.connections.filter(conn => !!conn.cam).find(cam => cam.cam?.serialNumber === car.car?.cameraSerial)?.connection.sendAndAwait({type: "sleep"});
 
                 // Wait for 5 seconds
-                sleep(5000).then(() => {
-                    if (car.car) {
-                        car.car.coolingDown = false;
-                    }
-                    global.events.emit("accessoryCoolingDownComplete", {id: car.id});
-                })
-
+                await sleep(5000)
+                
+                if (car.car) {
+                    car.car.coolingDown = false;
+                }
+                global.events.emit("accessoryCoolingDownComplete", {id: car.id});
+                
             }
         })
 
