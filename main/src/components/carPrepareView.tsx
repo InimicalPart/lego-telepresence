@@ -53,8 +53,8 @@ export default function CarPrepareView({
                 case "ready":
                     setMessage("Registering for events...");
                     ws.current.send(JSON.stringify({type: "register", events: ["camStreamRestart", "camStreamRestartComplete", "carClaimed", "carUnclaimed"]}));
-                    setMessage("Checking if car is claimed...");
-                    ws.current.send(JSON.stringify({type: "query", id: carID, query: "isClaimed"}));
+                    setMessage("Checking if car is cooling down...");
+                    ws.current.send(JSON.stringify({type: "query", id: carID, query: "isCoolingDown"}));
                     break;
                 case "isClaimed":
                     if (data.claimed) {
@@ -63,6 +63,18 @@ export default function CarPrepareView({
                     } else {
                         setMessage("Car is not claimed. Redirecting to dashboard in 5 seconds...");
                         setTitle("Car Unclaimed");
+                        setSpinner(false);
+                        setTimeout(()=>{
+                            window.location.href = "/";
+                        },5000)
+                }
+                case "isCoolingDown":
+                    if (!data.coolingDown) {
+                        setMessage("Checking if car is claimed...");
+                        ws.current.send(JSON.stringify({type: "query", id: carID, query: "isClaimed"}));
+                    } else {
+                        setMessage("Car is currently cooling down. Redirecting to dashboard in 5 seconds...");
+                        setTitle("Car in cooldown");
                         setSpinner(false);
                         setTimeout(()=>{
                             window.location.href = "/";

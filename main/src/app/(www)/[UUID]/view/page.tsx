@@ -21,6 +21,7 @@ export default async function ControlPage({ params }: {params:Promise<{UUID:stri
     const cam = global.connections.find(carConn => carConn.type === "cam" && carConn.cam?.serialNumber === conn?.car?.cameraSerial)
     
     if (!conn || conn.type !== "car") return redirect("/")
+    if (conn.car?.coolingDown) return redirect("/")
 
 
     return <>

@@ -31,18 +31,32 @@ export async function SOCKET(
             if (!car.car) return;
             if (car.car.inControlBy === uID) {
                 car.car.inControlBy = null;
-                car.car.coolingDown = true;
                 global.events.emit("carUnclaimed", {id: car.id});
+                car.car.coolingDown = true;
                 global.events.emit("accessoryCoolingDown", {id: car.id});
                 console.log(`[WS] Car unclaimed by user: ${car.id}`);
                 // If camera is live, stop the broadcast
-                await global.connections.filter(conn => !!conn.cam).find(cam => cam.cam?.serialNumber === car.car?.cameraSerial)?.connection.sendAndAwait({type: "stopBroadcast"});
+
+                const camera = global.connections.filter(conn => !!conn.cam).find(cam => cam.cam?.serialNumber === car.car?.cameraSerial);
+
+                await camera?.connection.sendAndAwait({type: "stopBroadcast"});
+
+                
+                if (global.streamMap.has(camera?.cam?.ssid ?? "")) {
+                    global.streamMap.get(camera?.cam?.ssid ?? "")?.stop();
+                    global.streamMap.delete(camera?.cam?.ssid ?? "");
+                }
+
+                if (camera?.cam?.isLive) {
+                    camera.cam.isLive = false;
+                }
+
                 // Make the camera sleep
-                await global.connections.filter(conn => !!conn.cam).find(cam => cam.cam?.serialNumber === car.car?.cameraSerial)?.connection.sendAndAwait({type: "sleep"});
+                await camera?.connection.sendAndAwait({type: "sleep"});
 
                 // Wait for 5 seconds
                 await sleep(5000)
-                
+
                 if (car.car) {
                     car.car.coolingDown = false;
                 }
@@ -186,6 +200,14 @@ export async function SOCKET(
 
                     console.log(`[WS] User requested isClaimed status: ${!!conn.car.inControlBy}`);
                     return client.send(JSON.stringify({type: "isClaimed", claimed: !!conn.car.inControlBy, connId, nonce}));
+                } else if (query == "isCoolingDown") {
+                    if (!conn.car) {
+                        console.log(`[WS] User requested isCoolingDown status from non-car connection: ${connId}`);
+                        return client.send(JSON.stringify({error: "Connection is not a car", connId, nonce}));
+                    }
+
+                    console.log(`[WS] User requested isCoolingDown status: ${conn.car.coolingDown}`);
+                    return client.send(JSON.stringify({type: "isCoolingDown", coolingDown: conn.car.coolingDown ?? false, connId, nonce}));
                 }
 
                 const allowedQueries = conn.type=="car"?
@@ -258,7 +280,7 @@ export async function SOCKET(
                     return client.send(JSON.stringify({error: "Connection is not a camera"}));
                 }
 
-                await conn.connection.sendAndAwait({type: "startBroadcast", url:await getRtmpUrl(conn?.cam?.ssid), options: {
+                await conn.connection.sendAndAwait({type: "startBroadcast", url:(await getRtmpUrl(conn?.cam?.ssid)).url, options: {
                     encode: false,
                     windowSize: "WINDOW_SIZE_480",
                     lens: "LENS_SUPERVIEW"

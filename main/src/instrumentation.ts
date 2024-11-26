@@ -6,6 +6,8 @@ declare const global: LTPGlobal;
 global.connections = [];
 global.nms = null;
 global.events = new EventEmitter();
+global.streamMap = new Map();
+
 
 async function randomString(length: number) {
     let result = '';
@@ -32,7 +34,10 @@ export async function register() {
             cam.cam.isLive = true;
         }
 
-        console.log(global.nms?.getSession(data.id))
+        if (cam && cam.cam) {
+            global.streamMap.set(data.name, global.nms?.getSession(data.id) as any);
+        }
+
     })
 
     global.events.on('streamDisconnect', async (data) => {
@@ -44,6 +49,10 @@ export async function register() {
         if (cam && cam.cam?.isLive) {
             console.log("Setting camera to not live");
             cam.cam.isLive = false;
+        }
+
+        if (global.streamMap.has(data.name)) {
+            global.streamMap.delete(data.name);
         }
     })
 
@@ -124,17 +133,20 @@ async function setupDefUser() {
 
 async function setupRTMP() {
     if (process.env.NEXT_RUNTIME === 'nodejs') {
-        const rtmp = await import('./utils/rtmp');
         const misc = await import('./utils/misc');
+        const rtmp = await import('./utils/rtmp');
     
-        global.rtmpSecret = await misc.generateRandomHex(64);
+        global.rtmpSecret = await misc.generateRandomHex(16);
         console.log(`RTMP Secret: ${global.rtmpSecret}`);
-        console.log(`Temporary RTMP URL: ${await rtmp.getRtmpUrl("testing")}`)
         const APIUSER = await randomString(32);
         const APIPASS = await randomString(32);
-    
         console.log(`API User: ${APIUSER}`);
         console.log(`API Pass: ${APIPASS}`);
+
+        const tempRTMP = await rtmp.getRtmpUrl("TestSource", "temp");
+        console.log(`Temporary RTMP URL: ${tempRTMP.url}`)
+        console.log(`Temporary RTMP Expiry: ${tempRTMP.expiresAt.toLocaleString()}`)
+
 
         const NodeMediaServer = await import('node-media-server');
         const nms = new NodeMediaServer.default({
@@ -160,7 +172,6 @@ async function setupRTMP() {
             logType: 3
         })
         nms.run();
-
         nms.on('postPublish', async (id, StreamPath) => {
             const streamPath = StreamPath.split("/").filter((x: string) => x != "");
 
