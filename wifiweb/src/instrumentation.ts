@@ -34,7 +34,7 @@ export async function register(){
                 hostname: ""
             }
         }
-        global.isSystemd = !!process.env.INVOCATION_ID?.trim()
+        global.isSystemd = !!(process.env.INVOCATION_ID?.trim())
         const networks = await import("./lib/networks")
         const cmd = await import("./lib/cmd")
 

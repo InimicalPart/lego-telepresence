@@ -821,13 +821,17 @@ export default class GoProClient {
      * @returns {Promise<void>}
      */
     async setStabilization(enabled: boolean): Promise<void> {
-        await this.setSetting(SETTINGS.HYPERSMOOTH, enabled ? "01" : "00") 
+        await this.setSetting(SETTINGS.HYPERSMOOTH, enabled) 
     }
 
 
-    async setSetting(settingId: typeof SETTINGS[keyof typeof SETTINGS] | string, value: string) {
+    async setSetting(settingId: typeof SETTINGS[keyof typeof SETTINGS] | string, value: string | boolean) {
         if (typeof settingId === 'number') {
             settingId = settingId.toString(16).padStart(2, '0')
+        }
+
+        if (typeof value === 'boolean') {
+            value = value ? "01" : "00"
         }
 
         console.log(this.getTLVByteArray(settingId, value))

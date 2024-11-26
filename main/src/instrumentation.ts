@@ -31,6 +31,8 @@ export async function register() {
             console.log("Setting camera to live");
             cam.cam.isLive = true;
         }
+
+        console.log(global.nms?.getSession(data.id))
     })
 
     global.events.on('streamDisconnect', async (data) => {

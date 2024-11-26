@@ -123,6 +123,7 @@ function registerHandlers() {
 
 
 async function parseMessage(message: string) {
+    console.log(typeof message, message)
     try {
         const data = JSON.parse(message);
         
@@ -137,6 +138,7 @@ async function parseMessage(message: string) {
         isBusy = false;
     } catch (error) {
         console.warn(`Error parsing message: ${error}`);
+        console.warn((error as TypeError).stack);
         isBusy = false;
     }
 }
@@ -322,7 +324,8 @@ async function parseStatusValues(resp: Buffer) {
 }
 
 async function getConnectedWiFi() {
-    const stdout = execSync("nmcli -t -c no device wifi show-password");
+    const whoami = execSync("whoami").toString().trim();
+    const stdout = execSync(`${whoami=="lowpriv"?"sudo ":""}nmcli -t -c no device wifi show-password`);
     const lines = stdout.toString().split("\n");
 
     const ssid = lines.find((line) => line?.toUpperCase()?.startsWith("SSID"))?.split(":")?.[1]?.trim();
@@ -381,7 +384,7 @@ async function stopBroadcast() {
 
 async function getSystemOSName() {
     try {
-        return readFileSync("/etc/os-release", {encoding: "utf-8"}).match(/PRETTY_NAME="(.*)"/)[1];
+        return readFileSync("/etc/os-release", {encoding: "utf-8"})?.match(/PRETTY_NAME="(.*)"/)[1]?.trim();
     } catch (e) {
         return "Unknown";
     }
@@ -389,10 +392,10 @@ async function getSystemOSName() {
  
 async function getModel() {
     try {
-        return readFileSync("/proc/device-tree/model", {encoding: "utf-8"});
+        return readFileSync("/proc/device-tree/model", {encoding: "utf-8"})?.trim();
     } catch (e) {
         try {
-            return (await si.system()).model;
+            return (await si.system()).model?.trim();
         } catch (e) {
             return "Unknown";
         }   
@@ -401,7 +404,7 @@ async function getModel() {
 
 async function getHostname() {
     try {
-        return readFileSync("/etc/hostname", {encoding: "utf-8"});
+        return readFileSync("/etc/hostname", {encoding: "utf-8"})?.trim();
     } catch (e) {
         return "Unknown";
     }
@@ -430,8 +433,9 @@ async function connectToWiFi(data) {
     // not connected
     if ((8 & ap.scanEntryFlags) != 8) {
         // not saved
+        console.log(data.ssid, data.password)
         if ((2 & ap.scanEntryFlags) != 2) {
-            await camera.connectToNewAP(data.ssid, Buffer.from(data.password, "base64").toString("utf-8"))
+            await camera.connectToNewAP(data.ssid, data.password)
         } else {
             await camera.connectToConfiguredAP(data.ssid)
         }
