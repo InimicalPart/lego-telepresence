@@ -63,6 +63,18 @@ export default function CarPrepareControl({
                         setModalOpen(false)
                     }
                     break
+                case "isCoolingDown":
+                    if (!data.coolingDown) {
+                        setMessage("Attempting to claim control of car...");
+                        ws.current.send(JSON.stringify({type: "claimControl", id: carID}));
+                    } else {
+                        setMessage("Car is cooling down. Redirecting to dashboard in 5 seconds...");
+                        setTitle("Car in cooldown");
+                        setSpinner(false);
+                        setTimeout(()=>{
+                            window.location.href = "/";
+                        },5000)
+                    }
                 case "status":
                     console.log(data)
                     if (data.connId == carID) {
@@ -75,8 +87,8 @@ export default function CarPrepareControl({
                                 window.location.href = "/";
                             },5000)
                         } else {
-                            setMessage("Attempting to claim control of car...");
-                            ws.current.send(JSON.stringify({type: "claimControl", id: carID}));
+                            setMessage("Checking if car is cooling down...")
+                            ws.current.send(JSON.stringify({type: "query", id: carID, query: "isCoolingDown"}))
                         }
                     } else if (data.connId == camID) {
                         console.log(data)

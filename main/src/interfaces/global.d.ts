@@ -41,5 +41,6 @@ interface LTPGlobal extends NodeJS.Global {
             callback: (...args: any[]) => void
         }[]
     },
-    validEvents: stirng[]
+    validEvents: string[],
+    streamMap: Map<string, {id:string, stop: () => void}>,
 } 

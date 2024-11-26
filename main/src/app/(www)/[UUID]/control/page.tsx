@@ -28,6 +28,8 @@ export default async function ControlPage({ params }: {params:Promise<{UUID:stri
     
     if (!conn || conn.type !== "car") return redirect("/")
 
+    if (conn.car?.coolingDown) return redirect("/")
+
 
     return <>
         <CarPrepare carID={UUID} camID={cam?.id ?? null}/>
