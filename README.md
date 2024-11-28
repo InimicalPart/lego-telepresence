@@ -1,27 +1,9 @@
 # LTP - Lego Telepresence
 
 ## To-Do / Ideas / I Want To-Dos
-- [ ] Try to fix the 3s delay between the GoPro and website
-  - [ ] Find alternatives for sending live feed from GoPro to server
-    - [Preview mode](https://community.gopro.com/s/article/GoPro-Quik-Live-Preview?language=en_US)?
-      - Requires PI to connect to GoPro's WiFi, PI has 1 network adapter
-        - Get a small another network adapter? 
-      - Can work via USB?
-        - Connect camera to RPI's micro USB port
-            - Requires USB-C to Micro USB adapter
-  - [Webcam mode](https://community.gopro.com/s/article/GoPro-Webcam?language=en_US)?
-    - Is Linux supported?
-  - Use phone instead?
-    - Inefficient
-    - Phone is big
-    - Not enough LEGO pieces for an adjustable phone mount
-    - How?
-- [ ] Real-time car availability updating on /[UUID]/control
 - [ ] Implement instructional movement
 - [ ] Record movements, with playback / saving
 - [ ] Make movement UI a bit more prettier and user-friendly
-- [ ] Add more control buttons
-  - [ ] Turn off camera stream? (permanent)
 - [ ] Car Client - Fix bugs
   - [ ] Not very stable, may crash if wrongly configured, or get stuck in certain situations
   - [ ] Automatically calibrate the wheels to be straight (possible?)

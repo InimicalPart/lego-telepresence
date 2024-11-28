@@ -30,7 +30,6 @@ export default async function ControlPage({ params }: {params:Promise<{UUID:stri
 
     if (conn.car?.coolingDown) return redirect("/")
 
-
     return <>
         <CarPrepare carID={UUID} camID={cam?.id ?? null}/>
         <div className="max-h-fit max-w-full mt-5 flex flex-col justify-center items-center self-start">
@@ -58,7 +57,7 @@ export default async function ControlPage({ params }: {params:Promise<{UUID:stri
                             <InstructionsContent />
                         </CardBody>
                     </Card>
-                    <PlayerView camId={cam?.id ?? null} carId={UUID}/>
+                    <PlayerView camId={cam?.id ?? null} carId={UUID} viewer={false}/>
                 </div>
                 <div className="w-full flex flex-row gap-2 self-end mt-5">
                     {

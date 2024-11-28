@@ -67,7 +67,8 @@ export default function CarPrepareView({
                         setTimeout(()=>{
                             window.location.href = "/";
                         },5000)
-                }
+                    }
+                    break;
                 case "isCoolingDown":
                     if (!data.coolingDown) {
                         setMessage("Checking if car is claimed...");
@@ -80,6 +81,7 @@ export default function CarPrepareView({
                             window.location.href = "/";
                         },5000)
                     }
+                    break;
                 case "status":
                     if (data.connected) {
                         setModalOpen(false);

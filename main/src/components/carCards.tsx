@@ -39,7 +39,6 @@ export default function CarCards({cars: preSetCars, cams: preSetCams}:{cars?: an
         const next = queue.current.shift()
         if (next) {
             busy = true;
-            console.log("Processing next in queue: ", next)
             const data = next;
             switch (data.type) {
                 case "ready":
@@ -134,7 +133,6 @@ export default function CarCards({cars: preSetCars, cams: preSetCams}:{cars?: an
         {
         ...(cars.map( (car, i) => {
             const camera = cams.find(conn=>conn.cam?.serialNumber === car?.car?.cameraSerial) ?? null
-            console.log(car, camera)
     
             const carHost = car?.system as {
                 model: string,

@@ -15,6 +15,7 @@ interface LTPGlobal extends NodeJS.Global {
                 serialNumber: string,
                 ssid: string,
                 isLive: boolean;
+                viewers: number;
             },
             car?: {
                 name: string,

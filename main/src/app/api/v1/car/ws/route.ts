@@ -84,6 +84,12 @@ export async function SOCKET(
                     global.events.emit("systemReceived", {id: connection.id, type: "car", data});
                 }
                 break
+            case "status":
+                console.log(`[WS] Car responded with status: ${data.connected ? "connected" : "disconnected"}`);
+                break;
+            case "battery":
+                console.log(`[WS] Car responded with battery: ${data.level}%`);
+                break;
             default:
                 console.log(`[WS] Unknown message type: ${data.type}`);
                 console.log(data);
