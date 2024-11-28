@@ -63,9 +63,10 @@ export async function SOCKET(
                     cam: {
                         ...data,
                         isLive: false,
+                        viewers: 0,
                     },
                     connection: client,
-                    ready: false,
+                    ready: false
                 });
                 client.send(JSON.stringify({type: "connected"}));
                 client.send(JSON.stringify({type: "system"}));
@@ -77,8 +78,14 @@ export async function SOCKET(
             case "ok":
                 console.log(`[WS] Camera responded with OK`);
                 break;
+            case "status":
+                console.log(`[WS] Camera responded with status: ${data.connected ? "connected" : "disconnected"}${data.sleeping ? " (sleeping)" : ""}`);
+                break;
+            case "battery":
+                console.log(`[WS] Camera responded with battery: ${data.level}%`);
+                break;
             case "system":
-                console.log(`[WS] Cam responded with system info`);
+                console.log(`[WS] Camera responded with system info`);
                 const connection = global.connections.find(conn => conn.connection === client);
                 if (connection) {
                     delete data.type
@@ -87,8 +94,11 @@ export async function SOCKET(
                     global.events.emit("systemReceived", {id: connection.id, type: "car", data});
                 }
                 break
+            case "getInfo":
+                console.log(`[WS] Camera responded with camera information`);
+                break
             default:
-                console.log(`[WS] Unknown message type: ${data.type}`);
+                console.log(`[WS] Unknown message type from camera: ${data.type}`);
                 console.log(data);
                 break;
         }

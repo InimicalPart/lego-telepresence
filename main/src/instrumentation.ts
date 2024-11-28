@@ -96,6 +96,7 @@ async function setupEventRegistrars() {
         "camStreamRestartComplete",
         "accessoryCoolingDown",
         "accessoryCoolingDownComplete",
+        "viewerUpdate"
     ]
 
 

@@ -61,7 +61,7 @@ let connAPIKey: string;
 camera.events.on("ready", async () => {
     console.log("Camera ready");
     isConnected = true;
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
+    if (!socket || socket?.readyState !== WebSocket.OPEN) {
         connAPIKey = await generateAccessoryAPIKey();
         socket = new WebSocket(process.env.WS_URL, { headers: {authorization: "Bearer " + connAPIKey}});
         registerHandlers();
@@ -72,7 +72,7 @@ camera.events.on("disconnect", (data) => {
     console.log(`Camera disconnected${data.isSleeping ? ", the user put it to sleep.":""}`);
     isConnected = false;
     //! Do not close the connection if the user put the camera to sleep, this is so that the camera can be woken up by the server
-    if (socket.readyState === WebSocket.OPEN && !data.isSleeping) {
+    if (socket?.readyState === WebSocket.OPEN && !data.isSleeping) {
         socket.close(1000, "Camera disconnected from client");
     }
 })

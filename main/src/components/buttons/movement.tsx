@@ -30,7 +30,14 @@ export default function MovementControls({carId}:{carId: string}) {
 
             switch (data.type) {
                 case "ready":
+                    if (ws.current) ws.current.send(JSON.stringify({type: "register", events: ["carDisconnect"]}));
                     setWsReady(true);
+                    break;
+                case "carDisconnect":
+                    if (data.data.id === carId) {
+                        window.location.href = "/";
+                    }
+                    break;
             }
         }
 
@@ -52,7 +59,6 @@ export default function MovementControls({carId}:{carId: string}) {
         function onKeyInput(data: KeyboardEvent) {
             if (!keyboardControl) return;
 
-            console.log(data.key)
             // TODO: Instead of ws.send, add it to the instructions list by emitting LTP-InstructionsUpdate with {"type": "add", "instruction": {type: "move", direction: "forward"}} as the detail
             if (data.key === "ArrowUp") {
                 window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Forwards", type: "move", direction: "forward"}}}))

@@ -10,7 +10,9 @@ export default function Player({
     className,
     style,
     muteNotice = false,
-    muted = true
+    muted = true,
+    viewer = false,
+    setViewers = (viewers: number) => {}
 }: {
     width?: string,
     height?: string,
@@ -19,6 +21,8 @@ export default function Player({
     style?: CSSProperties,
     muteNotice?: boolean,
     muted?: boolean,
+    viewer?: boolean,
+    setViewers?: (viewers: number) => void
 }) {
 
 
@@ -43,7 +47,14 @@ export default function Player({
             }
 
             if (data.type === "ready") {
+                ws.current.send(JSON.stringify({type: "register", events: ["viewerUpdate"]}));
+
+                if (viewer) {
+                    ws.current.send(JSON.stringify({type: "registerAsViewer", id: cameraId}));
+                }
+
                 ws.current.send(JSON.stringify({type: "query", id: cameraId, query: "status"}));
+                ws.current.send(JSON.stringify({type: "query", query: "viewers", id: cameraId}));
 
                 checkTimer.current = setInterval(()=>{
                     if (ws.current && ws.current.readyState === ws.current.OPEN) ws.current.send(JSON.stringify({type: "query", id: cameraId, query: "status"}));
@@ -59,6 +70,12 @@ export default function Player({
                         ws.current.send(JSON.stringify({type: "query", id: cameraId, query: "streaming"}));
                     }
                 }
+            } else if (data.type === "viewerUpdate") {
+                if (cameraId == data.data.id) {
+                    setViewers(data.data.count);
+                }
+            } else if (data.type === "viewers") {
+                setViewers(data.viewers);
             }
         }
 

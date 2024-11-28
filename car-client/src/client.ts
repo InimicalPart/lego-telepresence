@@ -147,15 +147,15 @@ async function handleQueue() {
     // if there are more than 1 "move" messages in the queue, remove all but the last one
 
     if (messageQueue.filter((msg) => msg.type === "move").length > 1) {
-        messageQueue = messageQueue.filter((msg) => msg.type !== "move" || msg.at === messageQueue.filter((msg) => msg.type === "move").sort((a, b) => a.at - b.at)[0].at);
+        messageQueue = messageQueue.filter((msg) => msg.type !== "move" || msg.at === messageQueue.filter((msg) => msg.type === "move").sort((a, b) => b.at - a.at)[0].at);
     }
 
     if (messageQueue.filter((msg) => msg.type === "setSpeed").length > 1) {
-        messageQueue = messageQueue.filter((msg) => msg.type !== "setSpeed" || msg.at === messageQueue.filter((msg) => msg.type === "setSpeed").sort((a, b) => a.at - b.at)[0].at);
+        messageQueue = messageQueue.filter((msg) => msg.type !== "setSpeed" || msg.at === messageQueue.filter((msg) => msg.type === "setSpeed").sort((a, b) => b.at - a.at)[0].at);
     }
 
     if (messageQueue.filter((msg) => msg.type === "setWheelAngle").length > 1) {
-        messageQueue = messageQueue.filter((msg) => msg.type !== "setWheelAngle" || msg.at === messageQueue.filter((msg) => msg.type === "setWheelAngle").sort((a, b) => a.at - b.at)[0].at);
+        messageQueue = messageQueue.filter((msg) => msg.type !== "setWheelAngle" || msg.at === messageQueue.filter((msg) => msg.type === "setWheelAngle").sort((a, b) => b.at - a.at)[0].at);
     }
 
     if (messageQueue.length > 0) {

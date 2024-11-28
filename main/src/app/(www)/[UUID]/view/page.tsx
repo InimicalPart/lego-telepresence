@@ -11,7 +11,7 @@ import { JWTCheck } from "@/utils/auth/credCheck";
 
 declare const global: LTPGlobal;
 
-export default async function ControlPage({ params }: {params:Promise<{UUID:string}>}) {
+export default async function ViewPage({ params }: {params:Promise<{UUID:string}>}) {
     //! Check if the user is logged in, if not, redirect to login page
     const res = await JWTCheck();
     if (res.success !== true) return res;
@@ -22,6 +22,8 @@ export default async function ControlPage({ params }: {params:Promise<{UUID:stri
     
     if (!conn || conn.type !== "car") return redirect("/")
     if (conn.car?.coolingDown) return redirect("/")
+
+
 
 
     return <>
@@ -43,7 +45,7 @@ export default async function ControlPage({ params }: {params:Promise<{UUID:stri
 
                 <div className="flex flex-row gap-2 ">
 
-                    <PlayerView camId={cam?.id ?? null} carId={UUID}/>
+                    <PlayerView camId={cam?.id ?? null} carId={UUID} viewer={true}/>
                 </div>
                
             </div>

@@ -75,8 +75,8 @@ export default function CarPrepareControl({
                             window.location.href = "/";
                         },5000)
                     }
+                    break
                 case "status":
-                    console.log(data)
                     if (data.connId == carID) {
                         if (!data.connected) {
                             if (ws.current.readyState == ws.current.OPEN) ws.current.close()
@@ -90,8 +90,8 @@ export default function CarPrepareControl({
                             setMessage("Checking if car is cooling down...")
                             ws.current.send(JSON.stringify({type: "query", id: carID, query: "isCoolingDown"}))
                         }
+                        break
                     } else if (data.connId == camID) {
-                        console.log(data)
                         if (data.sleeping) {
                             // Camera is connected but sleeping
                             //! Wake camera
@@ -124,6 +124,7 @@ export default function CarPrepareControl({
 
 
                     }
+                    break
             }
 
         }
