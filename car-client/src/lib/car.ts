@@ -93,9 +93,15 @@ export default class TechnicClient {
                     this.peripheral = data.peripheral
                     this.events.emit("ready")
 
-                    this.turnMotor = await this.hub.waitForDeviceAtPort("D") as TechnicMediumAngularMotor
-                    this.frontMotor = await this.hub.waitForDeviceAtPort("A") as TechnicMediumAngularMotor
-                    this.backMotor = await this.hub.waitForDeviceAtPort("B") as TechnicMediumAngularMotor
+                    while (!this.turnMotor) {
+                        this.turnMotor = await this.hub.waitForDeviceAtPort("D") as TechnicMediumAngularMotor
+                    }
+                    while (!this.frontMotor) {
+                        this.frontMotor = await this.hub.waitForDeviceAtPort("A") as TechnicMediumAngularMotor
+                    }
+                    while (!this.backMotor) {
+                        this.backMotor = await this.hub.waitForDeviceAtPort("B") as TechnicMediumAngularMotor
+                    }
 
                     resolve(null)
                 }
@@ -176,7 +182,6 @@ export default class TechnicClient {
     async realMove(type: "move"|"stop", data: {
         x: number | null,
         y: number | null,
-        distance: number | null
     }) {
 
 
@@ -197,6 +202,35 @@ export default class TechnicClient {
             await this.backMotor.setPower(data.y*100, true)
         }
         return
+    }
+
+    async instructionalBasedMove(type: "move"|"stop", data: {
+        x: number | null,
+        y: number | null,
+        duration: number,
+        speed: number
+    }) {
+        // Motor D - Wheel Turn
+        // Motor A - Front Drive
+        // Motor B - Back Drive
+
+        console.log("Setting power to", data.y*data.speed)
+        console.log("Setting angle to", data.x*100)
+
+        if (type === "stop") {
+            console.log("Stopping")
+            await this.frontMotor.setPower(0,true)
+            await this.backMotor.setPower(0,true)
+            await this.turnMotor.gotoAngle(0, 100)
+        } else if (type === "move") {
+            await this.turnMotor.gotoAngle(data.x*100, 100)
+            await this.frontMotor.setPower(data.y*data.speed, true)
+            await this.backMotor.setPower(data.y*data.speed, true)
+            await new Promise((resolve) => setTimeout(resolve, data.duration));
+            await this.frontMotor.setPower(0,true)
+            await this.backMotor.setPower(0,true)
+            await this.turnMotor.gotoAngle(0, 100)
+        }
     }
 
     async move(amount: number) {

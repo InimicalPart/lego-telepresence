@@ -7,7 +7,7 @@ export default function AlertNearby({camId}:{camId: string}) {
     const [alerting, setAlerting ] = useState(false);
 
     return (
-        <Button size="md" variant="flat" color="secondary" onClick={()=>{
+        <Button size="md" variant="flat" color="secondary" className="w-full" onClick={()=>{
             setAlerting(true);
             const ws = new WebSocket(`/api/v1/user/ws`);
             ws.onmessage = (m) => {

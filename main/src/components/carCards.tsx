@@ -203,11 +203,11 @@ export default function CarCards({cars: preSetCars, cams: preSetCams}:{cars?: an
                                     </div>
                                 } classNames={{
                                         base: [
-                                        "before:bg-neutral-700 dark:before:bg-black",
+                                            "before:bg-neutral-700 dark:before:bg-black",
                                         ],
                                         content: [
-                                        "py-2 px-4 shadow-xl",
-                                        "text-white bg-neutral-900",
+                                            "py-2 px-4 shadow-xl",
+                                            "text-white bg-neutral-900",
                                         ],
                                     }}
                                 >
@@ -257,11 +257,11 @@ export default function CarCards({cars: preSetCars, cams: preSetCams}:{cars?: an
                                     </div>
                                 } classNames={{
                                         base: [
-                                        "before:bg-neutral-700 dark:before:bg-black",
+                                            "before:bg-neutral-700 dark:before:bg-black",
                                         ],
                                         content: [
-                                        "py-2 px-4 shadow-xl",
-                                        "text-white bg-neutral-900",
+                                            "py-2 px-4 shadow-xl",
+                                            "text-white bg-neutral-900",
                                         ],
                                     }}
                                 >
@@ -290,11 +290,11 @@ export default function CarCards({cars: preSetCars, cams: preSetCams}:{cars?: an
                                     </div>
                                 } classNames={{
                                         base: [
-                                        "before:bg-neutral-700 dark:before:bg-black",
+                                            "before:bg-neutral-700 dark:before:bg-black",
                                         ],
                                         content: [
-                                        "py-2 px-4 shadow-xl",
-                                        "text-white bg-neutral-900",
+                                            "py-2 px-4 shadow-xl",
+                                            "text-white bg-neutral-900",
                                         ],
                                     }}>
                                         <div>

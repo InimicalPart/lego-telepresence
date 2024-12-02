@@ -54,7 +54,7 @@ export default async function ControlPage({ params }: {params:Promise<{UUID:stri
                         </CardHeader>
                         <Divider orientation="horizontal" />
                         <CardBody className="flex flex-col gap-2 items-center">
-                            <InstructionsContent />
+                            <InstructionsContent carId={UUID} />
                         </CardBody>
                     </Card>
                     <PlayerView camId={cam?.id ?? null} carId={UUID} viewer={false}/>
@@ -98,7 +98,12 @@ export default async function ControlPage({ params }: {params:Promise<{UUID:stri
                         <CardBody className="flex flex-col gap-2">
                             <KeyboardControlToggle />
                             <FreeControlToggle />
-                            <AlertNearby camId={cam?.id ?? ""} />
+                            <div className="w-full min-w-full relative">
+                                <Tooltip content={!!cam ? <></> : <p className="text-md font-semibold">A connected camera is required for this action</p>} showArrow={true}>
+                                    <div draggable={false} className={`rounded-xl w-full h-full z-20 bg-neutral-400 p-0 top-0 absolute left-0 ${!!cam ? "opacity-0 pointer-events-none" : "opacity-50 pointer-events-auto"}`} />
+                                </Tooltip>
+                                <AlertNearby camId={cam?.id ?? ""} />
+                            </div>
                         </CardBody>
                     </Card>
                 </div>

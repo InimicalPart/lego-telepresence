@@ -50,7 +50,7 @@ export async function JWTFromCreds(creds: { username: string, password: string, 
     .setNotBefore(new Date())
     .setIssuer('inimi:'+creds.hostname)
     .setAudience('inimi:'+creds.hostname)
-    .setExpirationTime('2h')
+    .setExpirationTime('1d')
     .sign(secret);
 }
 

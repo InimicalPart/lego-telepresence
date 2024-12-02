@@ -33,3 +33,18 @@ body>div[data-overlay-container="true"]:first-of-type {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
 }
+
+
+.fadeInAndOut {
+    animation: fadeInAndOut .5s ease-in-out infinite alternate;
+    opacity: 1;
+}
+
+@keyframes fadeInAndOut {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: .5;
+    }
+}
