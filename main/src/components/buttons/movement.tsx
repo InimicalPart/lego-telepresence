@@ -1,23 +1,26 @@
 "use client";
 
-import { Button, Kbd, Slider } from "@nextui-org/react";
+import { Button, Divider, Input, Kbd, Slider } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
 import { Joystick, JoystickShape } from 'react-joystick-component';
+import { PauseIcon, PlayIcon } from "../icons";
 
 export default function MovementControls({carId}:{carId: string}) {
 
     const [keyboardControl, setKeyboardControl] = useState<boolean>(false);
     const [freeControl, setFreeControl] = useState<boolean>(false);
     const [sliderValue, setSliderValue] = useState<number>(0);
+    const [instructionsPaused, setInstructionsPaused] = useState<boolean>(false);
     const [sliderValue2, setSliderValue2] = useState<number>(0);
     const [wsReady, setWsReady] = useState(false);
     const ws = useRef<WebSocket | null>(null);
 
+    const [duration, setDuration] = useState<number>(1000);
+    const [speed, setSpeed] = useState<number>(100);
+
     useEffect(()=>{
         if (!ws.current || (ws.current.readyState != ws.current.OPEN && ws.current.readyState != ws.current.CONNECTING))
             ws.current = new WebSocket(`${location.origin.replace("http", "ws")}/api/v1/user/ws`);
-
-
 
         ws.current.onmessage = (message) => {
             let data;
@@ -59,15 +62,26 @@ export default function MovementControls({carId}:{carId: string}) {
         function onKeyInput(data: KeyboardEvent) {
             if (!keyboardControl) return;
 
-            // TODO: Instead of ws.send, add it to the instructions list by emitting LTP-InstructionsUpdate with {"type": "add", "instruction": {type: "move", direction: "forward"}} as the detail
             if (data.key === "ArrowUp") {
-                window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Forwards", type: "move", direction: "forward"}}}))
+                data.preventDefault();
+                window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Forwards", type: "move", direction: "forward", data: { x:0, y:1, duration, speed }}}}))
             } else if (data.key === "ArrowDown") {
-                window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Backwards", type: "move", direction: "backward"}}}))
+                data.preventDefault();
+                window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Backwards", type: "move", direction: "backward", data: { x:0, y:-1, duration, speed }}}}))
             } else if (data.key === "ArrowLeft") {
-                window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Left", type: "move", direction: "left"}}}))
+                data.preventDefault();
+                if (data.ctrlKey) {
+                    window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Back Left", type: "move", direction: "left", data: { x:-1, y:-1, duration, speed }}}}))
+                } else {
+                    window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Left", type: "move", direction: "left", data: { x:-1, y:1, duration, speed }}}}))
+                }
             } else if (data.key === "ArrowRight") {
-                window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Right", type: "move", direction: "right"}}}))
+                data.preventDefault();
+                if (data.ctrlKey) {
+                    window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Back Right", type: "move", direction: "right", data: { x:1, y:-1, duration, speed }}}}))
+                } else {
+                    window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Right", type: "move", direction: "right", data: { x:1, y:1, duration, speed }}}}))
+                }
             }
         }
 
@@ -113,28 +127,56 @@ export default function MovementControls({carId}:{carId: string}) {
                     ws.current.send(JSON.stringify({...a, id:carId}))
             }} />
         </div> :
-        <>
-            <div className="flex flex-wrap max-w-min gap-2">
-                <div className="flex flex-row gap-2">
-                    <Button disabled={keyboardControl} variant="shadow" className="opacity-0 pointer-events-none"></Button>
-                    <Button disabled={keyboardControl} variant="shadow" onClick={()=>!keyboardControl &&
-                        window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Forwards", type: "move", direction: "forward"}}}))
-                    }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["up"]} /> : "UP"}</Button>
-                    <Button disabled={keyboardControl} variant="shadow" className="opacity-0 pointer-events-none"></Button>
-                </div>
-                <div className="flex flex-row gap-2">
-                <Button disabled={keyboardControl} variant="shadow" onClick={()=>!keyboardControl &&
-                        window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Left", type: "move", direction: "left"}}}))
-                }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["left"]} /> : "LEFT"}</Button>
-                <Button disabled={keyboardControl} variant="shadow" onClick={()=>!keyboardControl &&
-                        window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Backwards", type: "move", direction: "backward"}}}))
-                }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["down"]} /> : "DOWN"}</Button>
-                <Button disabled={keyboardControl} variant="shadow" onClick={()=>!keyboardControl &&
-                        window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Right", type: "move", direction: "right"}}}))
-                }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["right"]} /> : "RIGHT"}</Button>
+        <div className="flex flex-col gap-1 w-full">
+            <div className="px-12 flex flex-row justify-center">
+                <Button className="px-40" onClick={()=>{
+                    const currentlyPaused = instructionsPaused;
+                    setInstructionsPaused(!instructionsPaused)
 
+                    if (currentlyPaused) {
+                        window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "resume"}}))
+                    } else {
+                        window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "pause"}}))
+                    }
+
+                }} variant="shadow" color={instructionsPaused ? "success" : "danger"} startContent={instructionsPaused ? <PlayIcon size={16} color="currentColor"/> : <PauseIcon size={16} color="currentColor"/>}>{instructionsPaused ? "Resume" : "Pause"} Instructions</Button>
+            </div>
+            <Divider orientation="horizontal" className="my-2"/>
+            <div className="flex flex-row justify-evenly w-full items-center">
+                {/* <p className="text-center w-full font-bold">The following inputs will be added as instructions</p> */}
+                <div className="flex flex-col gap-2">
+                    {/* input for duration */}
+
+                    <Input variant="faded" type="number" label="Duration (seconds)" min={1} defaultValue={(duration/1000)+""} endContent={"second"+((duration/1000) !== 1 ? "s" : "")} onChange={(v: any)=>setDuration(parseFloat(v.target.value) * 1000)}/>
+                    {/* input for speed */}
+                    <Input variant="faded" type="number" label="Speed" min={0} max={100} defaultValue={speed+""} endContent={"%"} onChange={(v: any)=>setSpeed(parseInt(v.target.value))}/>
+                </div>
+                <div className="flex flex-wrap max-w-min gap-2 border-3 p-5 rounded-xl border-neutral-700">
+                    <div className="flex flex-row gap-2">
+                        <Button disabled={keyboardControl} variant="shadow" color="primary" onClick={()=>!keyboardControl &&
+                                window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Left", type: "move", direction: "left", data: { x:-1, y:1, duration, speed }}}}))
+                        }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["left"]} /> : "LEFT"}</Button>
+                        <Button disabled={keyboardControl} variant="shadow" color="primary" onClick={()=>!keyboardControl &&
+                            window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Forwards", type: "move", direction: "forward", data: { x:0, y:1, duration, speed }}}}))
+                        }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["up"]} /> : "UP"}</Button>
+                        <Button disabled={keyboardControl} variant="shadow" color="primary" onClick={()=>!keyboardControl &&
+                                window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Right", type: "move", direction: "right", data: { x:1, y:1, duration, speed }}}}))
+                        }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["right"]} /> : "RIGHT"}</Button>                    
+                    </div>
+                    <div className="flex flex-row gap-2">
+                    <Button disabled={keyboardControl} variant="shadow" color="primary" onClick={()=>!keyboardControl &&
+                            window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Back Left", type: "move", direction: "left", data: { x:-1, y:-1, duration, speed }}}}))
+                    }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["ctrl","left"]} /> : "B-LEFT"}</Button>
+                    <Button disabled={keyboardControl} variant="shadow" color="primary" onClick={()=>!keyboardControl &&
+                            window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Backwards", type: "move", direction: "backward", data: { x:0, y:-1, duration, speed }}}}))
+                    }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["down"]} /> : "DOWN"}</Button>
+                    <Button disabled={keyboardControl} variant="shadow" color="primary" onClick={()=>!keyboardControl &&
+                            window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Back Right", type: "move", direction: "right", data: { x:1, y:-1, duration, speed }}}}))
+                    }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["ctrl","right"]} /> : "B-RIGHT"}</Button>
+
+                    </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }

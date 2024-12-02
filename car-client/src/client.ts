@@ -121,6 +121,7 @@ function registerHandlers() {
 
 
 async function parseMessage(message: string) {
+    console.log("INCOMMING MESSAGE FROM SOCKET", message)
     try {
         const data = JSON.parse(message);
         messageQueue.push({...data, at: Date.now()});
@@ -195,6 +196,10 @@ async function processMessage(data: any) {
         case "stop":
             await handleStop(data);
             break;
+        case "instructionalMove":
+            await handleInstructionalMove(data);
+            await sendOK(data.nonce);
+            break;
         case "setWheelAngle":
             await car.setWheelAngle(data.angle);
             break;
@@ -212,6 +217,10 @@ async function handleStop(data: any) {
 
 async function handleMove(data: any) {
     await car.realMove("move", data.data);
+}
+
+async function handleInstructionalMove(data: any) {
+    await car.instructionalBasedMove("move", data.data);
 }
 
 async function sendStatus(nonce: string) {

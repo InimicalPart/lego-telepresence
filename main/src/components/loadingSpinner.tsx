@@ -8,6 +8,8 @@ export default function LoadingSpinner({
     hidden?: boolean
 }) {
   return (
-    <Spinner size={size} hidden={hidden}/>
+    <Spinner size={size} hidden={hidden} style={{
+        display: hidden ? "none" : "block"
+    }}/>
   );
 }

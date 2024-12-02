@@ -379,6 +379,7 @@ export async function SOCKET(
                 break;
             case "stop":
             case "move":
+            case "instructionalMove":
                 if (!conn.car) {
                     console.log(`[WS] User ${uID} requested move/stop from non-car connection: ${connId}`);
                     return client.send(JSON.stringify({error: "Connection is not a car"}));
@@ -386,7 +387,16 @@ export async function SOCKET(
                 const type = data.type;
                 delete data.type;
                 delete data.id;
-                conn.connection.send({type: type, data })
+                if (type == "instructionalMove") {
+                    conn.connection.sendAndAwait({type: type, data}, 300000).then((response: any) => {
+                        client.send(JSON.stringify({...response, connId, nonce}));
+                    }).catch((error: string) => {
+                        console.log(`[WS] Error sending '${type}' by ${uID} to ${connId}: ${error}`);
+                        client.send(JSON.stringify({error: `Error sending '${type}'`, connId, nonce}));
+                    })
+                } else {
+                    conn.connection.send({type: type, data })
+                }
                 break;
             case "alert":
                 if (!conn.cam) {
