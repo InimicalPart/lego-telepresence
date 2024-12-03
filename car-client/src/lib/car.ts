@@ -91,17 +91,23 @@ export default class TechnicClient {
                     this.connected = true
                     this.hub = data.hub
                     this.peripheral = data.peripheral
-                    this.events.emit("ready")
 
                     while (!this.turnMotor) {
                         this.turnMotor = await this.hub.waitForDeviceAtPort("D") as TechnicMediumAngularMotor
                     }
+                    console.log("Turn Motor Found: " + this.turnMotor.portName)
+                    
                     while (!this.frontMotor) {
                         this.frontMotor = await this.hub.waitForDeviceAtPort("A") as TechnicMediumAngularMotor
                     }
+                    console.log("Front Motor Found: " + this.frontMotor.portName)
+                    
                     while (!this.backMotor) {
                         this.backMotor = await this.hub.waitForDeviceAtPort("B") as TechnicMediumAngularMotor
                     }
+                    console.log("Back Motor Found: " + this.backMotor.portName)
+
+                    this.events.emit("ready")
 
                     resolve(null)
                 }
@@ -152,23 +158,6 @@ export default class TechnicClient {
         return this.hub.getDeviceAtPort(port)
     }
 
-    async turnRight(front: TechnicMediumAngularMotor, back: TechnicMediumAngularMotor, back2: TechnicMediumAngularMotor) {
-        back.setPower(-50)
-        back2.setPower(-50)
-        front.gotoAngle(90, 50)
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        front.gotoAngle(-0, 50)
-        back.setPower(50)
-        back2.setPower(50)
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        front.gotoAngle(0, 50)
-        back.setPower(0)
-        back2.setPower(0)
-
-
-    }
-
     async setWheelAngle(angle: number) {
         // Motor D - Wheel Turn
         // Motor A - Front Drive
@@ -184,7 +173,6 @@ export default class TechnicClient {
         y: number | null,
     }) {
 
-
         if (type === "stop") {
             console.log("Stopping")
             await this.frontMotor.setPower(0,true)
@@ -193,13 +181,18 @@ export default class TechnicClient {
         } else if (type === "move") {
 
             console.log("------")
-            console.log("Setting power to", data.y*100)
-            console.log("Setting angle to", data.x*100)
+            console.log("Setting power to", (data.y ? data.y*100 : "same as before"))
+            console.log("Setting angle to", (data.x ? data.x*100 : "same as before"))
             console.log("------")
 
-            await this.turnMotor.gotoAngle(data.x*100, 100)
-            await this.frontMotor.setPower(data.y*100, true)
-            await this.backMotor.setPower(data.y*100, true)
+            
+            if (data.x || data.x == 0) {
+                await this.turnMotor.gotoAngle(data.x*100, 100)
+            }
+            if (data.y || data.y == 0) {
+                await this.frontMotor.setPower(data.y*100, true)
+                await this.backMotor.setPower(data.y*100, true)
+            }
         }
         return
     }
@@ -214,8 +207,13 @@ export default class TechnicClient {
         // Motor A - Front Drive
         // Motor B - Back Drive
 
-        console.log("Setting power to", data.y*data.speed)
-        console.log("Setting angle to", data.x*100)
+        console.log(data)
+
+        console.log("------")
+        console.log("Setting power to", (data.y ? data.y*data.speed : "same as before"))
+        console.log("Setting angle to", (data.x ? data.x*100 : "same as before"))
+        console.log("------")
+
 
         if (type === "stop") {
             console.log("Stopping")
@@ -223,13 +221,23 @@ export default class TechnicClient {
             await this.backMotor.setPower(0,true)
             await this.turnMotor.gotoAngle(0, 100)
         } else if (type === "move") {
-            await this.turnMotor.gotoAngle(data.x*100, 100)
-            await this.frontMotor.setPower(data.y*data.speed, true)
-            await this.backMotor.setPower(data.y*data.speed, true)
-            await new Promise((resolve) => setTimeout(resolve, data.duration));
-            await this.frontMotor.setPower(0,true)
-            await this.backMotor.setPower(0,true)
-            await this.turnMotor.gotoAngle(0, 100)
+            if (data.x || data.x == 0) {
+                await this.turnMotor.gotoAngle(data.x*100, 100)
+            }
+            if (data.y || data.y == 0) {
+                await this.frontMotor.setPower(data.y*data.speed, true)
+                await this.backMotor.setPower(data.y*data.speed, true)
+            }
+            if (data.duration && data.duration !== 0) {    
+                await new Promise((resolve) => setTimeout(resolve, data.duration));
+                if (data.x || data.x == 0) {
+                    await this.turnMotor.gotoAngle(0, 100)
+                }
+                if (data.y || data.y == 0) {
+                    await this.frontMotor.setPower(0,true)
+                    await this.backMotor.setPower(0,true)
+                }
+            }
         }
     }
 

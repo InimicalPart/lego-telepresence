@@ -12,7 +12,7 @@ export default function Player({
     muteNotice = false,
     muted = true,
     viewer = false,
-    setViewers = (viewers: number) => {}
+    setViewers = () => {}
 }: {
     width?: string,
     height?: string,
@@ -97,7 +97,7 @@ export default function Player({
             window.removeEventListener("LTP-PLAYER-RESTART-PENDING", onRestartPending)
             window.removeEventListener("LTP-RESTART-STREAM", onRestart)
         }
-    },[cameraId, checkTimer, ws, url])
+    },[cameraId, checkTimer, ws, url, setViewers, viewer])
 
 
 

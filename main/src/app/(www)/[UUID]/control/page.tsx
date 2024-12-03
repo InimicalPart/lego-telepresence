@@ -2,7 +2,7 @@ import RestartStream from "@/components/buttons/restartStream";
 import CarPrepare from "@/components/carPrepareControl";
 import { Car } from "@/components/icons";
 import { LTPGlobal } from "@/interfaces/global";
-import { Button, Card, CardBody, CardHeader, Divider, Link, Spacer, Tooltip } from "@nextui-org/react";
+import { Button, Card, CardBody, CardFooter, CardHeader, Divider, Link, Spacer, Tooltip } from "@nextui-org/react";
 import { redirect } from "next/navigation";
 
 import "@/styles/live-dot.css";
@@ -13,6 +13,8 @@ import KeyboardControlToggle from "@/components/buttons/keyboardControl";
 import FreeControlToggle from "@/components/buttons/freeControl";
 import AlertNearby from "@/components/buttons/alertNearby";
 import { JWTCheck } from "@/utils/auth/credCheck";
+import SaveButton from "@/components/buttons/instructions/save";
+import LoadButton from "@/components/buttons/instructions/load";
 
 
 declare const global: LTPGlobal;
@@ -56,6 +58,10 @@ export default async function ControlPage({ params }: {params:Promise<{UUID:stri
                         <CardBody className="flex flex-col gap-2 items-center">
                             <InstructionsContent carId={UUID} />
                         </CardBody>
+                        <CardFooter className="flex flex-row gap-2">
+                            <SaveButton />
+                            <LoadButton />
+                        </CardFooter>
                     </Card>
                     <PlayerView camId={cam?.id ?? null} carId={UUID} viewer={false}/>
                 </div>

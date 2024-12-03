@@ -21,6 +21,7 @@ export async function SOCKET(
     const uID = await generateWSID("user-")
     console.log(`[WS] A user client has connected (${uID})`);
     let isViewer = false
+    let watching: string | null = null;
     client.on('close', () => {
         const index = global.connections.findIndex(conn => conn.connection === client);
         if (index !== -1) {
@@ -32,7 +33,7 @@ export async function SOCKET(
             if (!car.car) return;
             if (isViewer) {
                 const camera = global.connections.filter(conn => !!conn.cam).find(cam => cam.cam?.serialNumber === car.car?.cameraSerial);
-                if (camera) {
+                if (camera && camera.id == watching) {
                     if (camera.cam) {
                         camera.cam.viewers--
                         if (camera.cam.viewers < 0) camera.cam.viewers = 0;
@@ -50,7 +51,9 @@ export async function SOCKET(
 
                 const camera = global.connections.filter(conn => !!conn.cam).find(cam => cam.cam?.serialNumber === car.car?.cameraSerial);
 
-                await camera?.connection.sendAndAwait({type: "stopBroadcast"});
+                if (camera?.connection) {
+                    await camera?.connection.sendAndAwait({type: "stopBroadcast"});
+                }
 
                 
                 if (global.streamMap.has(camera?.cam?.ssid ?? "")) {
@@ -62,11 +65,12 @@ export async function SOCKET(
                     camera.cam.isLive = false;
                 }
 
-                // Make the camera sleep
-                await camera?.connection.sendAndAwait({type: "sleep"});
+                if (camera?.connection) {
+                    await camera?.connection.sendAndAwait({type: "sleep"});
 
-                // Wait for 5 seconds
-                await sleep(5000)
+                    // Wait for 5 seconds
+                    await sleep(5000)
+                }
 
                 if (car.car) {
                     car.car.coolingDown = false;
@@ -187,6 +191,8 @@ export async function SOCKET(
                 }
 
                 isViewer = true;
+                watching = connId;
+
                 conn.cam.viewers++
 
                 global.events.emit("viewerUpdate", {id: connId, count: conn.cam.viewers});
@@ -387,15 +393,16 @@ export async function SOCKET(
                 const type = data.type;
                 delete data.type;
                 delete data.id;
-                if (type == "instructionalMove") {
+                if (type == "move") {
+                    conn.connection.send({type: type, data })
+                } else {
+                    //! We don't do awaiting for move as move is designed for fast requests and we don't need to wait for a response
                     conn.connection.sendAndAwait({type: type, data}, 300000).then((response: any) => {
                         client.send(JSON.stringify({...response, connId, nonce}));
                     }).catch((error: string) => {
                         console.log(`[WS] Error sending '${type}' by ${uID} to ${connId}: ${error}`);
                         client.send(JSON.stringify({error: `Error sending '${type}'`, connId, nonce}));
                     })
-                } else {
-                    conn.connection.send({type: type, data })
                 }
                 break;
             case "alert":
