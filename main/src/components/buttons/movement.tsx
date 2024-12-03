@@ -199,7 +199,7 @@ export default function MovementControls({carId}:{carId: string}) {
                             }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["shift","left"]} /> : "LEFT"}</Button>
                             <Button disabled={keyboardControl} variant="shadow" color="danger" onClick={()=>!keyboardControl &&
                                     window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Stop", type: "stop"}}}))
-                            }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["end"]} /> : "STOP"}</Button>
+                            }>{keyboardControl ? <div className="p-1 bg-white rounded-lg text-sm">END</div> : "STOP"}</Button>
                             <Button disabled={keyboardControl} variant="shadow" color="primary" onClick={()=>!keyboardControl &&
                                     window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Turn Right", type: "move", data: { x: 1, y: (overridePrevious ? 0 : null), speed, duration: untilOverwritten ? 0 : duration }}}}))
                             }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["shift","right"]} /> : "RIGHT"}</Button>
