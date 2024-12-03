@@ -14,12 +14,11 @@ export default function InstructionsContent({
         name: string,
         type: string,
         data: any,
-        processing: boolean
     }[]>([])
 
     const [wsReady, setWsReady] = useState(false);
     const [processMessages, setProcessMessages] = useState<boolean>(true);
-    const processingIndex = useRef<number>(-1);
+    const [showEditNameFor, setShowEditNameFor] = useState<number | null>(null);
 
     const ws = useRef<WebSocket | null>(null);
 
@@ -65,11 +64,10 @@ export default function InstructionsContent({
                 const id = instruction?.index as number;
                 if (!instruction) return;
                 busy = true;
-                processingIndex.current = id;
 
                 console.log(`[CMD] Running instruction: ${instruction.name}`);
 
-                let message: {
+                const message: {
                     [key: string]: any
                 } = {
                     type: instruction.type != "stop" ? "instructionalMove" : "stop",
@@ -78,10 +76,10 @@ export default function InstructionsContent({
 
                 switch (instruction.type) {
                     case "move":
-                        message.x = instruction.data.x;
-                        message.y = instruction.data.y;
-                        message.duration = instruction.data.duration;
-                        message.speed = instruction.data.speed;
+                        if (instruction?.data?.x || instruction?.data?.x == 0) message.x = instruction.data.x;
+                        if (instruction?.data?.y || instruction?.data?.y == 0) message.y = instruction.data.y;
+                        message.duration = instruction.data?.duration;
+                        message.speed = instruction.data?.speed;
                         break;
                     case "stop":
                         break;
@@ -100,34 +98,26 @@ export default function InstructionsContent({
                         })
                     )
                     busy = false;
-                    processingIndex.current = -1;
                 })
             }
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [wsReady, instructions, processMessages]);
+    }, [wsReady, instructions, processMessages, carId]);
 
-
-
-    function generateID() {
-        return Math.random().toString(36).substring(2, 9);
-    }
 
     useEffect(() => {
         function onInstructionsUpdate(data: CustomEvent) {
             switch (data.detail.type) {
                 case "add":
-                    data.detail.instruction.processing = false;
-
-                    if (data.detail.instruction.data.speed || data.detail.instruction.data.speed == 0) {
-                        if (data.detail.instruction.data.speed < 1) data.detail.instruction.data.speed = 1;
-                        if (data.detail.instruction.data.speed > 100) data.detail.instruction.data.speed = 100;
+                    if (data?.detail?.instruction?.data?.speed || data?.detail?.instruction?.data?.speed == 0) {
+                        if (data?.detail?.instruction?.data?.speed < 1) data.detail.instruction.data.speed = 1;
+                        if (data?.detail?.instruction?.data?.speed > 100) data.detail.instruction.data.speed = 100;
                     }
 
-                    if (data.detail.instruction.data.duration || data.detail.instruction.data.duration == 0) {
-                        if (data.detail.instruction.data.duration < 1) data.detail.instruction.data.duration = 1000;
-                        if (data.detail.instruction.data.duration > 300000) data.detail.instruction.data.duration = 300000;
+                    if (data?.detail?.instruction?.data?.duration) {
+                        if (data?.detail?.instruction?.data?.duration < 0) data.detail.instruction.data.duration = 1000;
+                        if (data?.detail?.instruction?.data?.duration > 300000) data.detail.instruction.data.duration = 300000;
                     }
 
                     if (data.detail.prioritized) {
@@ -150,14 +140,14 @@ export default function InstructionsContent({
                     setInstructions(data.detail.instructions.map((instruction: {index:number, name:string, data:any}, index: number) => {
 
 
-                        if (instruction.data.speed || instruction.data.speed == 0) {
-                            if (instruction.data.speed < 1) instruction.data.speed = 1;
-                            if (instruction.data.speed > 100) instruction.data.speed = 100;
+                        if (instruction?.data?.speed || instruction?.data?.speed == 0) {
+                            if (instruction?.data?.speed < 1) instruction.data.speed = 1;
+                            if (instruction?.data?.speed > 100) instruction.data.speed = 100;
                         }
     
-                        if (instruction.data.duration || instruction.data.duration == 0) {
-                            if (instruction.data.duration < 1) instruction.data.duration = 1000;
-                            if (instruction.data.duration > 300000) instruction.data.duration = 300000;
+                        if (instruction?.data?.duration) {
+                            if (instruction?.data?.duration < 0) instruction.data.duration = 1000;
+                            if (instruction?.data?.duration > 300000) instruction.data.duration = 300000;
                         }
 
                         
@@ -188,10 +178,16 @@ export default function InstructionsContent({
             }
         }
 
+        function onInstructionsGet(data: CustomEvent) {
+            data.detail.callback(instructions);
+        }
+
         window.addEventListener("LTP-InstructionsUpdate", onInstructionsUpdate as EventListener)
+        window.addEventListener("LTP-InstructionsGet", onInstructionsGet as EventListener)
 
         return () => {
             window.removeEventListener("LTP-InstructionsUpdate", onInstructionsUpdate as EventListener)
+            window.removeEventListener("LTP-InstructionsGet", onInstructionsGet as EventListener)
         }
 
     }, [instructions])
@@ -226,8 +222,22 @@ export default function InstructionsContent({
                         <Card key={index} className={`flex flex-col justify-center items-center bg-neutral-100 min-h-fit shadow-sm w-full ${instruction.index == 0 && processMessages ? "fadeInAndOut" : ""}`}>
                             <CardBody className="flex justify-between items-center flex-row">
                                 <div>
-                                    <h1 className="font-bold text-lg">{instruction.name}</h1>
-                                    <p className="text-sm text-neutral-500">Duration: {instruction.data.duration/1000}s | Speed: {instruction.data.speed}%</p>
+                                    <input type="text" className={`outline-none text-lg font-bold ${showEditNameFor == instruction.index ? "" : "hidden"}`} value={instruction.name} onChange={(e) => {
+                                        setInstructions(instructions.map((i) => {
+                                            if (i.index == instruction.index) {
+                                                i.name = e.target.value;
+                                            }
+                                            return i;
+                                        }))
+                                    }} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>)=>{
+                                        // if enter, save and blur
+                                        console.log(e)
+                                        if (e.key === "Enter") {
+                                            setShowEditNameFor(null);
+                                        }
+                                    }} onBlur={() => setShowEditNameFor(null)} />
+                                    <h1 className={`font-bold text-lg ${showEditNameFor == instruction.index ? "hidden" : ""}`} onDoubleClick={()=>setShowEditNameFor(instruction.index)}>{instruction.name}</h1>
+                                    {!!instruction.data ? <p className="text-sm text-neutral-500">Duration: {instruction.data.duration == 0 ? "∞" : (instruction.data.duration/1000) + "s"} | Speed: {instruction.data.speed}%</p> : <></>}
                                 </div>
                                 <button className="outline-none" onClick={() => {
                                     window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {

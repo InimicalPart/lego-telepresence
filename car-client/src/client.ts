@@ -27,7 +27,6 @@ import path from "path";
 import { WebSocket } from "ws";
 import CarClient from "./lib/car.js";
 import si from "systeminformation";
-import performance from "./lib/performance.js";
 import * as jose from "jose"
 declare const global: CarClientGlobal;
 
@@ -51,7 +50,6 @@ setInterval(handleQueue, 50);
 const car = new CarClient(global.config.TECHNIC_MAC, true);
 
 let socket: WebSocket;
-let busy = false;
 let connAPIKey: string;
 car.events.on("ready", async () => {
     console.log("Car ready");
@@ -121,7 +119,6 @@ function registerHandlers() {
 
 
 async function parseMessage(message: string) {
-    console.log("INCOMMING MESSAGE FROM SOCKET", message)
     try {
         const data = JSON.parse(message);
         messageQueue.push({...data, at: Date.now()});
@@ -138,7 +135,6 @@ async function handleQueue() {
     if (queueBusy) return;
 
     queueBusy = true;
-    performance.start("handleQueue", undefined, {silent:true});
     // if there is a type "stop" in the queue, remove all "move" messages
 
     if (messageQueue.some((msg) => msg.type === "stop")) {
@@ -160,13 +156,9 @@ async function handleQueue() {
     }
 
     if (messageQueue.length > 0) {
-        performance.end("handleQueue");
         const message = messageQueue.shift();
-        performance.start("handleCMD", undefined, {silent:true});
         await processMessage(message);
-        performance.end("handleCMD");
     }
-    performance.exists("handleQueue") && performance.end("handleQueue", {silent:true});
     queueBusy = false;
 
 }
@@ -195,6 +187,7 @@ async function processMessage(data: any) {
             break;
         case "stop":
             await handleStop(data);
+            await sendOK(data.nonce);
             break;
         case "instructionalMove":
             await handleInstructionalMove(data);
