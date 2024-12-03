@@ -182,11 +182,6 @@ export default function MovementControls({carId}:{carId: string}) {
                 </div>
                 <div className="flex flex-col gap-2 justify-center items-center">
                     <div className="flex flex-wrap max-w-min gap-2 border-3 p-5 px-12 rounded-xl border-neutral-700">
-                    <Button disabled={keyboardControl} variant="shadow" color="primary" onClick={()=>{
-                                console.log({ x: (overridePrevious ? 0 : null), y:1, speed, duration: untilOverwritten ? 0 : duration })
-                                window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Forward Left", type: "move", data: { x: (overridePrevious ? 0 : null), y:1, speed, duration: untilOverwritten ? 0 : duration }}}}))
-                            }
-                            }>{keyboardControl ? <Kbd className="w-8 h-8 text-lg flex items-center justify-center" keys={["left"]} /> : "TEST"}</Button>
                         <div className="flex flex-row gap-2">
                             <Button disabled={keyboardControl} variant="shadow" color="primary" onClick={()=>!keyboardControl &&
                                     window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "add", instruction: {name: "Move Forward Left", type: "move", data: { x: -1, y:1, speed, duration: untilOverwritten ? 0 : duration }}}}))
