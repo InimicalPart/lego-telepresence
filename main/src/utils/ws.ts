@@ -109,7 +109,7 @@ export async function validateAccessoryAPI(key: string) {
             algorithms: ['HS256']
         })
         
-        return Date.now() - ((payload.iat ?? 0) *1000) < 1000 * 60 * 1;
+        return Date.now() - ((payload.iat ?? 0) *1000) < 1000 * 60 * 5;
     } catch {
         return false;
     }

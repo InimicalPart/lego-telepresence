@@ -7,7 +7,7 @@
 [Unit]
 Description=LTP-WWW - RCC Website
 After=network-online.target
-Wants=network-online.target
+Requires=network-online.target
 StartLimitBurst=50
 StartLimitIntervalSec=1d
 
