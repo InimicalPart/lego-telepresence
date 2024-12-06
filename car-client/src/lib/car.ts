@@ -92,6 +92,15 @@ export default class TechnicClient {
                     this.hub = data.hub
                     this.peripheral = data.peripheral
 
+                    const motorTimeout = setTimeout(() => {
+                        this.logger("Failed to find all motors, exiting")
+                        process.exit(1)
+                    },15000)
+
+                    this.turnMotor = await this.hub.waitForDeviceAtPort("D") as TechnicMediumAngularMotor
+                    this.frontMotor = await this.hub.waitForDeviceAtPort("A") as TechnicMediumAngularMotor
+                    this.backMotor = await this.hub.waitForDeviceAtPort("B") as TechnicMediumAngularMotor
+
                     while (!this.turnMotor) {
                         this.turnMotor = await this.hub.waitForDeviceAtPort("D") as TechnicMediumAngularMotor
                     }
@@ -106,6 +115,8 @@ export default class TechnicClient {
                         this.backMotor = await this.hub.waitForDeviceAtPort("B") as TechnicMediumAngularMotor
                     }
                     console.log("Back Motor Found: " + this.backMotor.portName)
+
+                    clearTimeout(motorTimeout)
 
                     this.events.emit("ready")
 
@@ -230,12 +241,12 @@ export default class TechnicClient {
             }
             if (data.duration && data.duration !== 0) {    
                 await new Promise((resolve) => setTimeout(resolve, data.duration));
-                if (data.x || data.x == 0) {
-                    await this.turnMotor.gotoAngle(0, 100)
-                }
                 if (data.y || data.y == 0) {
                     await this.frontMotor.setPower(0,true)
                     await this.backMotor.setPower(0,true)
+                }
+                if (data.x || data.x == 0) {
+                    await this.turnMotor.gotoAngle(0, 100)
                 }
             }
         }

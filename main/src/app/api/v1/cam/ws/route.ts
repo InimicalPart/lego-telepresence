@@ -14,10 +14,12 @@ export async function SOCKET(
     //! Validate accessory API key
     const key = request.headers.authorization?.replace("Bearer ", "");
     if (!key) {
-        return client.send(JSON.stringify({status:401, error: "Unauthorized"}));
+        client.send(JSON.stringify({status:401, error: "Unauthorized"}));
+        return client.close();
     } else {
         if (!await validateAccessoryAPI(key)) {
-            return client.send(JSON.stringify({status:401, error: "Unauthorized"}));
+            client.send(JSON.stringify({status:401, error: "Unauthorized"}));
+            return client.close();
         }
     }
 

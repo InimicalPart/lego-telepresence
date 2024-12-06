@@ -22,6 +22,7 @@ export default function MovementControls({carId}:{carId: string}) {
 
     const [duration, setDuration] = useState<number>(1000);
     const [speed, setSpeed] = useState<number>(100);
+    const [snapBack, setSnapBack] = useState<boolean>(true);
     const [untilOverwritten, setUntilOverwritten] = useState<boolean>(false);
     const [overridePrevious, setOverridePrevious] = useState<boolean>(true);
 
@@ -60,6 +61,24 @@ export default function MovementControls({carId}:{carId: string}) {
         }
 
         function onFreeControlUpdate(data: CustomEvent) {
+            if (data.detail.value == false) {
+                if (ws.current) {
+                    ws.current.send(JSON.stringify({type: "setWheelAngle", id: carId, angle: 0}));
+                    ws.current.send(JSON.stringify({type: "setSpeed", id: carId, amount: 0}));
+                }
+                setFreePower(0)
+                setFreeWheelAngle(0)
+            }
+            
+            if (data.detail.value == true && !instructionsPaused) {
+                window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "pause"}}))
+            } else if (data.detail.value == false) {
+                if (instructionsPaused) {
+                    window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "pause"}}))
+                } else {
+                    window.dispatchEvent(new CustomEvent("LTP-InstructionsUpdate", {detail: {type: "resume"}}))
+                }
+            }
             setFreeControl(data.detail.value)
         }
 
@@ -112,27 +131,50 @@ export default function MovementControls({carId}:{carId: string}) {
 
     return (
         freeControl ? <div className="w-full flex flex-row justify-center gap-16 items-center p-5">
-            <div className="flex flex-col justify-center items-center gap-5 p-5 border-2 border-neutral-600 rounded-xl">
+            <div className="flex flex-col gap-2">
+                <div className="flex flex-col justify-center items-center gap-5 p-5 border-2 border-neutral-600 rounded-xl">
 
-                <Slider label="Wheel Angle" isDisabled={!wsReady} value={freeWheelAngle} size="md" className="w-80" aria-label="ok" minValue={-100} defaultValue={0} fillOffset={0} maxValue={100} step={1} onChange={((value: number) => {
-                    if (value === freeWheelAngle || !ws.current) return;
-                    ws.current.send(JSON.stringify({type: "setWheelAngle", id: carId, angle: value}));
-                    setFreeWheelAngle(value);
-                }) as any} onDoubleClick={()=>{
-                    if (!ws.current) return;
-                    ws.current.send(JSON.stringify({type: "setWheelAngle", id: carId, angle: 0}));
-                    setFreeWheelAngle(0)
-                }}/>
+                    <Slider label="Wheel Angle" isDisabled={!wsReady} value={freeWheelAngle} size="md" className="w-80" aria-label="ok" minValue={-100} defaultValue={0} fillOffset={0} maxValue={100} step={1} onChange={((value: number) => {
+                        if (value === freeWheelAngle || !ws.current) return;
+                        ws.current.send(JSON.stringify({type: "setWheelAngle", id: carId, angle: value}));
+                        setFreeWheelAngle(value);
+                    }) as any} onDoubleClick={()=>{
+                        if (!ws.current) return;
+                        ws.current.send(JSON.stringify({type: "setWheelAngle", id: carId, angle: 0}));
+                        setFreeWheelAngle(0)
+                    }} onChangeEnd={()=>{
+                        if (!ws.current || !snapBack) return
+                        ws.current.send(JSON.stringify({type: "setWheelAngle", id: carId, angle: 0}));
+                        setFreeWheelAngle(0)
+                    }}/>
 
-                <Slider label="Power" isDisabled={!wsReady} value={freePower} size="md" className="w-80" aria-label="ok" minValue={-100} defaultValue={0} fillOffset={0} maxValue={100} step={1} onChange={((value: number) => {
-                        if (value === freePower || !ws.current) return;
-                        ws.current.send(JSON.stringify({type: "setSpeed", id: carId, amount: value}));
-                        setFreePower(value);
-                }) as any} onDoubleClick={()=>{
-                    if (!ws.current) return;
-                    ws.current.send(JSON.stringify({type: "setSpeed", id: carId, amount: 0}));
-                    setFreePower(0)
-                }}/>
+                    <Slider label="Power" isDisabled={!wsReady} value={freePower} size="md" className="w-80" aria-label="ok" minValue={-100} defaultValue={0} fillOffset={0} maxValue={100} step={1} onChange={((value: number) => {
+                            if (value === freePower || !ws.current) return;
+                            ws.current.send(JSON.stringify({type: "setSpeed", id: carId, amount: value}));
+                            setFreePower(value);
+                    }) as any} onDoubleClick={()=>{
+                        if (!ws.current) return;
+                        ws.current.send(JSON.stringify({type: "setSpeed", id: carId, amount: 0}));
+                        setFreePower(0)
+                    }} onChangeEnd={()=>{
+                        if (!ws.current || !snapBack) return
+                        ws.current.send(JSON.stringify({type: "setSpeed", id: carId, amount: 0}));
+                        setFreePower(0)
+                    }}/>
+                </div>
+                <div>
+                    <Button className="w-full" variant="flat" color={snapBack ? "danger" : "success"} onClick={()=>{
+                        if (!snapBack && ws.current) {
+                            ws.current.send(JSON.stringify({type: "setWheelAngle", id: carId, angle: 0}));
+                            ws.current.send(JSON.stringify({type: "setSpeed", id: carId, amount: 0}));
+                            setFreeWheelAngle(0);
+                            setFreePower(0);
+                        }
+                        setSnapBack(!snapBack)
+                    }}>
+                        {snapBack ? "Disable Snap Back" : "Enable Snap Back"}
+                    </Button>
+                </div>
             </div>
             <div className="flex flex-col gap-2 text-neutral-600 items-center justify-center select-none">
                 <Divider orientation="vertical" className="h-12"/>

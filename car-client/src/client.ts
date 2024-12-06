@@ -82,7 +82,7 @@ async function generateAccessoryAPIKey() {
     .setProtectedHeader({
         alg: 'HS256'
     })
-    .setIssuedAt()
+    .setIssuedAt("-1m")
     .setIssuer('inimi:ltp-accessory')
     .setAudience('inimi:ltp-accessory')
     .sign(new TextEncoder().encode(
@@ -91,6 +91,9 @@ async function generateAccessoryAPIKey() {
 }
 
 function registerHandlers() {
+    socket.on("message", parseMessage);
+    
+    
     socket.on("open", () => {
         console.log("Connected to WebSocket server");
     });
@@ -113,8 +116,6 @@ function registerHandlers() {
             registerHandlers();
         }, 30000);
     })
-
-    socket.on("message", parseMessage);
 }
 
 
@@ -134,28 +135,28 @@ async function parseMessage(message: string) {
 async function handleQueue() {
     if (queueBusy) return;
 
-    queueBusy = true;
-    // if there is a type "stop" in the queue, remove all "move" messages
-
-    if (messageQueue.some((msg) => msg.type === "stop")) {
-        messageQueue = messageQueue.filter((msg) => msg.type !== "move" && msg.type !== "setSpeed" && msg.type !== "setWheelAngle");
-    }
-
-    // if there are more than 1 "move" messages in the queue, remove all but the last one
-
-    if (messageQueue.filter((msg) => msg.type === "move").length > 1) {
-        messageQueue = messageQueue.filter((msg) => msg.type !== "move" || msg.at === messageQueue.filter((msg) => msg.type === "move").sort((a, b) => b.at - a.at)[0].at);
-    }
-
-    if (messageQueue.filter((msg) => msg.type === "setSpeed").length > 1) {
-        messageQueue = messageQueue.filter((msg) => msg.type !== "setSpeed" || msg.at === messageQueue.filter((msg) => msg.type === "setSpeed").sort((a, b) => b.at - a.at)[0].at);
-    }
-
-    if (messageQueue.filter((msg) => msg.type === "setWheelAngle").length > 1) {
-        messageQueue = messageQueue.filter((msg) => msg.type !== "setWheelAngle" || msg.at === messageQueue.filter((msg) => msg.type === "setWheelAngle").sort((a, b) => b.at - a.at)[0].at);
-    }
-
     if (messageQueue.length > 0) {
+        queueBusy = true;
+        // if there is a type "stop" in the queue, remove all "move" messages
+
+        if (messageQueue.some((msg) => msg.type === "stop")) {
+            messageQueue = messageQueue.filter((msg) => msg.type !== "move" && msg.type !== "setSpeed" && msg.type !== "setWheelAngle");
+        }
+
+        // if there are more than 1 "move" messages in the queue, remove all but the last one
+
+        if (messageQueue.filter((msg) => msg.type === "move").length > 1) {
+            messageQueue = messageQueue.filter((msg) => msg.type !== "move" || msg.at === messageQueue.filter((msg) => msg.type === "move").sort((a, b) => b.at - a.at)[0].at);
+        }
+
+        if (messageQueue.filter((msg) => msg.type === "setSpeed").length > 1) {
+            messageQueue = messageQueue.filter((msg) => msg.type !== "setSpeed" || msg.at === messageQueue.filter((msg) => msg.type === "setSpeed").sort((a, b) => b.at - a.at)[0].at);
+        }
+
+        if (messageQueue.filter((msg) => msg.type === "setWheelAngle").length > 1) {
+            messageQueue = messageQueue.filter((msg) => msg.type !== "setWheelAngle" || msg.at === messageQueue.filter((msg) => msg.type === "setWheelAngle").sort((a, b) => b.at - a.at)[0].at);
+        }
+
         const message = messageQueue.shift();
         await processMessage(message);
     }

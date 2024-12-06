@@ -7,7 +7,9 @@
 [Unit]
 Description=Car Client - RCC Car Controller
 After=network-online.target
-Wants=network-online.target
+After=bluetooth.target
+Requires=network-online.target
+Requires=bluetooth.target
 StartLimitBurst=50
 StartLimitIntervalSec=1d
 

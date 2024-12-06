@@ -85,7 +85,7 @@ async function generateAccessoryAPIKey() {
     .setProtectedHeader({
         alg: 'HS256'
     })
-    .setIssuedAt()
+    .setIssuedAt("-1m")
     .setIssuer('inimi:ltp-accessory')
     .setAudience('inimi:ltp-accessory')
     .sign(new TextEncoder().encode(
@@ -156,6 +156,11 @@ async function processQueue() {
 
         const next = msgQueue.shift();
         if (next) {
+
+            if (next.type == "sleep") {
+                msgQueue = []
+            }
+
             console.log("Processing next message in queue ("+msgQueue.length+" remain):", next);
             isBusy = true;
             await processMessage(next);
