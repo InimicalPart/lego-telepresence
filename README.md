@@ -1,2 +1,2 @@
 # LTP - Lego Telepresence
-Control a LEGO car from anywhere in the world!
+A system to control a bluetooth only Technic Hub LEGO car via the web (with a GoPro as sight)
